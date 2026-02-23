@@ -1,18 +1,20 @@
-// swift-tools-version:5.8
+// swift-tools-version:6.2.0
 import PackageDescription
 
 let package = Package(
-    name: "PasskeyDemo",
+    name: "PassKeyValue",
     platforms: [
-       .macOS(.v12)
+        .macOS(.v13)
     ],
     dependencies: [
-        .package(url: "https://github.com/vapor/vapor.git", from: "4.0.0"),
-        .package(url: "https://github.com/vapor/fluent.git", from: "4.0.0"),
-        .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.0.0"),
-        .package(url: "https://github.com/m-barthelemy/vapor-queues-fluent-driver.git", from: "3.0.0-beta1"),
-        .package(url: "https://github.com/vapor/leaf.git", from: "4.0.0"),
-        .package(url: "https://github.com/swift-server/webauthn-swift.git", from: "1.0.0-alpha")
+        .package(url: "https://github.com/vapor/vapor.git", from: "4.115.0"),
+        .package(url: "https://github.com/vapor/fluent.git", from: "4.9.0"),
+        .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "4.6.0"),
+        .package(url: "https://github.com/vapor/leaf.git", from: "4.3.0"),
+        .package(
+            url: "https://github.com/m-barthelemy/vapor-queues-fluent-driver.git",
+            from: "3.0.0-beta1"),
+        .package(url: "https://github.com/swift-server/webauthn-swift.git", from: "1.0.0-alpha"),
     ],
     targets: [
         .target(
@@ -23,7 +25,7 @@ let package = Package(
                 .product(name: "Leaf", package: "leaf"),
                 .product(name: "Vapor", package: "vapor"),
                 .product(name: "WebAuthn", package: "webauthn-swift"),
-                .product(name: "QueuesFluentDriver", package: "vapor-queues-fluent-driver")
+                .product(name: "QueuesFluentDriver", package: "vapor-queues-fluent-driver"),
             ],
             swiftSettings: [
                 // Enable better optimizations when building in Release configuration. Despite the use of
@@ -33,9 +35,11 @@ let package = Package(
             ]
         ),
         .executableTarget(name: "Run", dependencies: [.target(name: "App")]),
-        .testTarget(name: "AppTests", dependencies: [
-            .target(name: "App"),
-            .product(name: "XCTVapor", package: "vapor"),
-        ])
+        .testTarget(
+            name: "AppTests",
+            dependencies: [
+                .target(name: "App"),
+                .product(name: "VaporTesting", package: "vapor"),
+            ]),
     ]
 )

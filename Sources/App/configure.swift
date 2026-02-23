@@ -48,7 +48,7 @@ public func configure(_ app: Application) throws {
 
     app.views.use(.leaf)
     app.webAuthn = WebAuthnManager(
-        config: WebAuthnManager.Config(
+        configuration: WebAuthnManager.Configuration(
             relyingPartyID: Environment.get("RP_ID") ?? "localhost",
             relyingPartyName: Environment.get("RP_DISPLAY_NAME") ?? "Vapor Passkey Demo",
             relyingPartyOrigin: Environment.get("RP_ORIGIN") ?? "http://localhost:8080"
