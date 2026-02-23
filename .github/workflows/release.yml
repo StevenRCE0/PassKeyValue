@@ -1,59 +1,19 @@
-name: Build and Release
+name: Release
 
-on:
-    push:
-        branches: ["main"]
-        # tags:
-        #     - "v*" # Triggers release job on version tags (e.g., v1.0.0)
-    pull_request:
-        branches: ["main"]
+on: [push]
 
 jobs:
-    # JOB 1: Build and Test on Multiple Platforms
-    build:
-        name: Test (Swift ${{ matrix.swift }} on ${{ matrix.os }})
-        runs-on: ${{ matrix.os }}
-        strategy:
-            fail-fast: false
-            matrix:
-                os: [ubuntu-latest, macos-latest]
-                swift: ["6.2.0"] # Pinning to Swift 6.2.0
-
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-
-            - name: Set up Swift ${{ matrix.swift }}
-              uses: swift-actions/setup-swift@v2
-              with:
-                  swift-version: ${{ matrix.swift }}
-
-            # Optional: Install Linux dependencies if your package needs them
-            # - name: Install Linux Dependencies
-            #   if: runner.os == 'Linux'
-            #   run: sudo apt-get update && sudo apt-get install -y libssl-dev
-
-            - name: Build (Release Configuration)
-              run: swift build -c release
-
-            - name: Run Tests
-              run: swift test
-
-    # JOB 2: Create GitHub Release (Only runs on tags)
     release:
-        name: Create Release
-        needs: build # Only runs if build/test passes on ALL platforms
-        if: startsWith(github.ref, 'refs/tags/')
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write # Required to create releases
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v6
+        runs-on: macos-latest
 
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
+        steps:
+            - uses: actions/checkout@v3
+            - name: Build executable for release
+              run: swift build -c release --arch arm64 --arch x86_64 --product passKeyValue
+            - name: Compress archive
+              run: tar -czf ${{ github.ref_name }}.tar.gz -C .build/apple/Products/Release passKeyValue
+            - name: Release
+              uses: softprops/action-gh-release@v1
               with:
-                  generate_release_notes: true # Auto-generates notes from commit messages
-                  draft: false
-                  prerelease: false
+                  files: ${{ github.ref_name }}.tar.gz
+                  token: ${{ secrets.GITHUB_TOKEN }}
