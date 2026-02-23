@@ -16,7 +16,8 @@ extension PasskeyController {
             if isMerging, let sessionUser = req.auth.get(User.self) {
                 user = sessionUser
             } else {
-                let username = beginRequest.passkeyName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let username =
+                    beginRequest.passkeyName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 guard !username.isEmpty else {
                     throw Abort(.badRequest, reason: "Passkey name is required.")
                 }
@@ -31,14 +32,16 @@ extension PasskeyController {
 
             let options = req.webAuthn.beginRegistration(user: user.webAuthnUser)
             req.session.data[PasskeySessionKey.flow] = PasskeyFlow.registration.rawValue
-            req.session.data[PasskeySessionKey.challenge] = Data(options.challenge).base64EncodedString()
+            req.session.data[PasskeySessionKey.challenge] = Data(options.challenge)
+                .base64EncodedString()
             return BeginPasskeyResponse(
                 mode: stage, creationOptions: options, requestOptions: nil)
 
         case .authentication:
-            let options = try req.webAuthn.beginAuthentication()
+            let options = req.webAuthn.beginAuthentication()
             req.session.data[PasskeySessionKey.flow] = PasskeyFlow.authentication.rawValue
-            req.session.data[PasskeySessionKey.challenge] = Data(options.challenge).base64EncodedString()
+            req.session.data[PasskeySessionKey.challenge] = Data(options.challenge)
+                .base64EncodedString()
             return BeginPasskeyResponse(
                 mode: stage, creationOptions: nil, requestOptions: options)
         }

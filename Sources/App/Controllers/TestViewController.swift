@@ -1,7 +1,7 @@
 import Vapor
 
 struct TestViewController: RouteCollection {
-    func boot(routes: RoutesBuilder) throws {
+    func boot(routes: any RoutesBuilder) throws {
         let sessionRoutes = routes.grouped(User.sessionAuthenticator())
         sessionRoutes.get(use: index)
 

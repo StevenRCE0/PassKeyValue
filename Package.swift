@@ -15,31 +15,35 @@ let package = Package(
             url: "https://github.com/m-barthelemy/vapor-queues-fluent-driver.git",
             from: "3.0.0-beta1"),
         .package(url: "https://github.com/swift-server/webauthn-swift.git", from: "1.0.0-alpha"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "App",
             dependencies: [
                 .product(name: "Fluent", package: "fluent"),
                 .product(name: "FluentSQLiteDriver", package: "fluent-sqlite-driver"),
                 .product(name: "Leaf", package: "leaf"),
                 .product(name: "Vapor", package: "vapor"),
-                .product(name: "WebAuthn", package: "webauthn-swift"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "QueuesFluentDriver", package: "vapor-queues-fluent-driver"),
+                .product(name: "WebAuthn", package: "webauthn-swift"),
             ],
-            swiftSettings: [
-                // Enable better optimizations when building in Release configuration. Despite the use of
-                // the `.unsafeFlags` construct required by SwiftPM, this flag is recommended for Release
-                // builds. See <https://github.com/swift-server/guides/blob/main/docs/building.md#building-for-production> for details.
-                .unsafeFlags(["-cross-module-optimization"], .when(configuration: .release))
-            ]
+            swiftSettings: swiftSettings
         ),
-        .executableTarget(name: "Run", dependencies: [.target(name: "App")]),
         .testTarget(
             name: "AppTests",
             dependencies: [
                 .target(name: "App"),
                 .product(name: "VaporTesting", package: "vapor"),
-            ]),
+            ],
+            swiftSettings: swiftSettings
+        ),
     ]
 )
+var swiftSettings: [SwiftSetting] {
+    [
+        .enableUpcomingFeature("ExistentialAny")
+    ]
+}

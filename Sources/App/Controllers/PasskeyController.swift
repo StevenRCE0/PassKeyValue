@@ -9,7 +9,7 @@ enum PasskeySessionKey {
 }
 
 struct PasskeyController: RouteCollection {
-    func boot(routes: RoutesBuilder) throws {
+    func boot(routes: any RoutesBuilder) throws {
         let authSessionRoutes = routes.grouped(User.sessionAuthenticator())
         authSessionRoutes.post("begin", use: beginHandler)
         authSessionRoutes.post("continue", use: continueHandler)

@@ -47,8 +47,10 @@ extension PasskeyController {
                 }
             )
 
-            try await WebAuthnCredential(from: verifiedCredential, name: passkeyName, userID: userID)
-                .save(on: req.db)
+            try await WebAuthnCredential(
+                from: verifiedCredential, name: passkeyName, userID: userID
+            )
+            .save(on: req.db)
             req.session.data[PasskeySessionKey.activeCredentialID] = verifiedCredential.id
             req.auth.login(user)
 
@@ -70,7 +72,9 @@ extension PasskeyController {
                 throw Abort(.unauthorized, reason: "Credential not found.")
             }
 
-            guard let publicKeyData = URLEncodedBase64(providedCredential.publicKey).urlDecoded.decoded
+            guard
+                let publicKeyData = URLEncodedBase64(providedCredential.publicKey).urlDecoded
+                    .decoded
             else {
                 throw Abort(
                     .internalServerError, reason: "Stored credential public key is invalid.")
@@ -92,10 +96,14 @@ extension PasskeyController {
                 guard let currentSessionUser = req.auth.get(User.self),
                     let currentSessionUserID = currentSessionUser.id
                 else {
-                    throw Abort(.unauthorized, reason: "Active session with passkey A is required for merge.")
+                    throw Abort(
+                        .unauthorized,
+                        reason: "Active session with passkey A is required for merge.")
                 }
 
-                guard let mergeOriginCredentialID = req.session.data[PasskeySessionKey.activeCredentialID]
+                guard
+                    let mergeOriginCredentialID = req.session.data[
+                        PasskeySessionKey.activeCredentialID]
                 else {
                     throw Abort(
                         .badRequest,
@@ -135,15 +143,18 @@ extension PasskeyController {
                 case .keepCurrentUser:
                     req.session.data[PasskeySessionKey.activeCredentialID] = mergeOriginCredentialID
                 case .keepProvidedUser:
-                    req.session.data[PasskeySessionKey.activeCredentialID] = try providedCredential.requireID()
+                    req.session.data[PasskeySessionKey.activeCredentialID] =
+                        try providedCredential.requireID()
                 }
 
                 req.auth.login(mergedUser)
                 let passkeys = try await passkeySummaries(for: mergedUserID, on: req.db)
-                return ContinuePasskeyResponse(status: "merged", userID: mergedUserID, passkeys: passkeys)
+                return ContinuePasskeyResponse(
+                    status: "merged", userID: mergedUserID, passkeys: passkeys)
             }
 
-            req.session.data[PasskeySessionKey.activeCredentialID] = try providedCredential.requireID()
+            req.session.data[PasskeySessionKey.activeCredentialID] =
+                try providedCredential.requireID()
             req.auth.login(providedCredential.user)
             let passkeys = try await passkeySummaries(for: providedUserID, on: req.db)
             return ContinuePasskeyResponse(
@@ -151,7 +162,7 @@ extension PasskeyController {
         }
     }
 
-    func passkeySummaries(for userID: UUID, on db: Database) async throws -> [PasskeySummary] {
+    func passkeySummaries(for userID: UUID, on db: any Database) async throws -> [PasskeySummary] {
         let credentials = try await WebAuthnCredential.query(on: db)
             .filter(\.$user.$id == userID)
             .all()
@@ -170,7 +181,7 @@ extension PasskeyController {
         keepMode: MergeMode,
         currentUserID: UUID,
         providedUserID: UUID,
-        on db: Database
+        on db: any Database
     ) async throws -> UUID {
         let winnerUserID: UUID
         let loserUserID: UUID

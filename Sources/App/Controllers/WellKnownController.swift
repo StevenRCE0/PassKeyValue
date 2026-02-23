@@ -1,7 +1,7 @@
 import Vapor
 
 struct WellKnownController: RouteCollection {
-    func boot(routes: RoutesBuilder) throws {
+    func boot(routes: any RoutesBuilder) throws {
         routes.get(".well-known", "apple-app-site-association", use: appleAppSiteAssociation)
     }
 

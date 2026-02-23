@@ -2,7 +2,7 @@ import Fluent
 import Vapor
 
 struct KVController: RouteCollection {
-    func boot(routes: RoutesBuilder) throws {
+    func boot(routes: any RoutesBuilder) throws {
         let protectedRoutes = routes.grouped(User.sessionAuthenticator())
         let kvRoutes = protectedRoutes.grouped("api", "kv")
 
