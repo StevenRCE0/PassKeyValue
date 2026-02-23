@@ -32,6 +32,10 @@ jobs:
               with:
                   swift-version: "6.2.0"
 
+            - name: Patch manifest tools version for CI # Hopefully we can get rid of it someday...
+              run: |
+                  perl -i -pe 'if ($. == 1) { s|^// swift-tools-version:.*$|// swift-tools-version:6.2.0| }' Package.swift
+
             - name: Generate DocC static site
               run: |
                   swift package \
