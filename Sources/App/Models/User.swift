@@ -5,6 +5,18 @@ import WebAuthn
 final class User: Model, Content {
     static let schema: String = "users"
 
+    // cascading is not supported since serialisation seemed more flexible
+    typealias KVKeyType = String
+    typealias KVValueType = String
+    //    enum KVValueType: Codable {
+    //        case string (String)
+    //        case int (Int)
+    //        case float (Float)
+    //        case boolean (Bool)
+    //    }
+
+    typealias KVType = [KVKeyType: KVValueType]
+
     @ID
     var id: UUID?
 
@@ -17,17 +29,22 @@ final class User: Model, Content {
     @Children(for: \.$user)
     var credentials: [WebAuthnCredential]
 
+    @Field(key: "storage")
+    var storage: KVType
+
     init() {}
 
     init(id: UUID? = nil, username: String) {
         self.id = id
         self.username = username
+        self.storage = [:]
     }
 }
 
 extension User {
     var webAuthnUser: PublicKeyCredentialUserEntity {
-        PublicKeyCredentialUserEntity(id: [UInt8](id!.uuidString.utf8), name: username, displayName: username)
+        PublicKeyCredentialUserEntity(
+            id: [UInt8](id!.uuidString.utf8), name: username, displayName: username)
     }
 }
 

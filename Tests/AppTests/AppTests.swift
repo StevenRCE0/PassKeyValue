@@ -2,12 +2,15 @@
 import XCTVapor
 
 final class AppTests: XCTestCase {
-    func testIndex() throws {
+    func testBeginWithAuthenticationStage() throws {
         let app = Application(.testing)
         defer { app.shutdown() }
         try configure(app)
 
-        try app.test(.GET, "", afterResponse: { res in
+        try app.test(.POST, "begin", beforeRequest: { req in
+            let payload = BeginPasskeyRequest(stage: .authentication)
+            try req.content.encode(payload)
+        }, afterResponse: { res in
             XCTAssertEqual(res.status, .ok)
         })
     }

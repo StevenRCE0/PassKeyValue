@@ -1,27 +1,64 @@
 #extend("base"):
   #export("body"):
-    <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8 gap-10">
-      <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-        <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Private Area</h2>
+    <div class="flex flex-col justify-center gap-8">
+      <div>
+        <h2 class="mt-2 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">PassKeyValue</h2>
+        <p class="mt-2 text-center text-sm text-gray-600">Logged in with <span class="font-semibold">#(username)</span></p>
       </div>
 
-      <div class="flex flex-col gap-5 sm:mx-auto sm:w-full sm:max-w-sm">
-      <!-- <p class="text-center text-sm font-medium text-gray-600">Note: Your demo account will be deleted after 2 hours.</p> -->
-        <h3 class="text-gray-800 text-xl">Hello, #(username)!</h3>
+      <form id="mergeChoiceForm" class="flex flex-col justify-center space-y-3 gap-3">
+        <button type="button" data-merge-action="registration" class="btn-soft w-full justify-center">
+          Create another passkey
+        </button>
+        <button type="button" data-merge-action="existing" class="btn-soft w-full justify-center">
+          Merge with another account
+        </button>
+      </form>
 
-        <p class="text-gray-800">
-          You successfully entered the private area with a passkey. Try logging out and logging in again with the same
-          passkey.
-        </p>
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-900">Your Passkeys</h3>
+          <button id="refreshPasskeysButton" type="button" class="btn-soft hidden">Refresh</button>
+        </div>
+        <p id="passkeysStatus" class="text-sm text-gray-600"></p>
+        <ul id="passkeysList" class="space-y-2"></ul>
+      </section>
 
-        <p class="text-gray-800">This account will be deleted ~2h after creation.</p>
+      <div class="flex justify-center">
+        <a href="/kv" class="btn-soft">Open KV Manager</a>
       </div>
 
-      <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+      <form id="mergeForm" class="space-y-4 hidden">
+        <input id="mergeBMode" name="mergeBMode" type="hidden" value="registration">
+        <input id="mergeMode" name="mergeMode" type="hidden" value="keepCurrentUser">
+        <div id="mergePasskeyNameContainer">
+          <label for="mergePasskeyName" class="block font-medium leading-6 text-gray-600">Name the Pass</label>
+          <div class="mt-2">
+            <input id="mergePasskeyName" name="mergePasskeyName" type="text" placeholder="My Passkey" class="block w-full rounded-lg border-0 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-fuchsia-800">
+          </div>
+        </div>
+        <button type="submit" class="btn-primary w-full justify-center mt-6">Continue</button>
+        <button id="mergeBackButton" type="button" class="btn-soft w-full justify-center mt-2">Go back</button>
+      </form>
+
+      <div class="space-y-2 hidden">
+        <h3 class="text-lg font-semibold text-gray-900">Output</h3>
+        <p id="status" class="text-sm text-gray-700"></p>
+        <pre id="output" class="text-xs bg-gray-100 rounded-lg p-3 overflow-x-auto text-gray-800"></pre>
+      </div>
+
+      <div>
         <form action="/logout" method="POST">
-          <button type="submit" class="btn-primary">Logout</button>
+          <button type="submit" class="btn-soft">Logout</button>
         </form>
       </div>
     </div>
+
+    <script type="application/javascript" src="/scripts/base64.js"></script>
+    <script type="application/javascript" src="/scripts/utils.js"></script>
+    <script type="application/javascript" src="/scripts/passkey/shared.js"></script>
+    <script type="application/javascript" src="/scripts/passkey/passkeys.js"></script>
+    <script type="application/javascript" src="/scripts/passkey/auth-merge.js"></script>
+    <script type="application/javascript" src="/scripts/passkey/init.js"></script>
   #endexport
 #endextend

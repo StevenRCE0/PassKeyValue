@@ -1,25 +1,42 @@
 import Fluent
 import FluentSQLiteDriver
 import Leaf
+import QueuesFluentDriver
 import Vapor
 import WebAuthn
-import QueuesFluentDriver
 
 // configures your application
 public func configure(_ app: Application) throws {
-    // uncomment to serve files from /Public folder
+    // mandatory CORS settings
+    let corsConfiguration = CORSMiddleware.Configuration(
+        allowedOrigin: .all,
+        allowedMethods: [.GET, .POST, .PUT, .OPTIONS, .DELETE, .PATCH],
+        allowedHeaders: [
+            .accept, .authorization, .contentType, .origin, .xRequestedWith, .userAgent,
+            .accessControlAllowOrigin, .accessControlAllowCredentials,
+        ],
+        allowCredentials: true
+    )
+    let cors = CORSMiddleware(configuration: corsConfiguration)
+
+    app.middleware.use(cors, at: .beginning)
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
+    // apply app session
     app.middleware.use(app.sessions.middleware)
-    app.sessions.use(.memory)
+    app.sessions.use(.fluent)
 
     if app.environment == .testing {
-        app.databases.use(.sqlite(.file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")), as: .sqlite)
+        app.databases.use(
+            .sqlite(.file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")), as: .sqlite)
     } else {
-        app.databases.use(.sqlite(.memory), as: .sqlite)
+        // app.databases.use(.sqlite(.memory), as: .sqlite)
+        app.databases.use(
+            .sqlite(.file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")), as: .sqlite)
     }
 
     app.migrations.add(JobMetadataMigrate())
+    app.migrations.add(SessionRecord.migration)
     app.migrations.add(CreateUser())
     app.migrations.add(CreateWebAuthnCredential())
 

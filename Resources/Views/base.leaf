@@ -15,6 +15,7 @@
     <meta name="theme-color" content="#ffffff">
 
     <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="/styles/tailwind.css" rel="stylesheet">
 
   </head>
@@ -22,17 +23,14 @@
     <span class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 -z-10 opacity-40 w-2/3 h-1/2 blur-3xl bg-gradient-to-tr from-cyan-300 to-fuchsia-300"></span>
     <div class="sm:mx-auto sm:w-full sm:max-w-md h-full flex flex-col justify-around px-6 py-12 lg:px-8 gap-6">
       #import("body")
-      <div>
-        <a href="https://github.com/brokenhandsio/Vapor-PasskeyDemo" target="_blank" class="btn-soft mb-3">
-          <img src="/images/github-mark.svg" alt="GitHub logo" class="h-[25px]"/>
-          <p>Vapor Passkey Demo</p>
+      <div class="flex justify-center gap-6">
+        <a href="https://github.com/brokenhandsio/Vapor-PasskeyDemo" target="_blank" class="block">
+          <p class="text-fuchsia-700 underline">Vapor Passkey Demo</p>
         </a>
-        <a href="https://github.com/swift-server/webauthn-swift" target="_blank" class="btn-soft">
-          <img src="/images/github-mark.svg" alt="GitHub logo" class="h-[25px]"/>
-          <p>Swift WebAuthn</p>
+        <a href="https://github.com/swift-server/webauthn-swift" target="_blank" class="block">
+          <p class="text-fuchsia-700 underline">Swift WebAuthn</p>
         </a>
       </div>
     </div>
   </body>
 </html>
-

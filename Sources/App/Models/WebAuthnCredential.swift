@@ -14,6 +14,9 @@ final class WebAuthnCredential: Model, Content {
     @Field(key: "current_sign_count")
     var currentSignCount: UInt32
 
+    @Field(key: "name")
+    var name: String
+
     @Parent(key: "user_id")
     var user: User
 
@@ -26,18 +29,20 @@ final class WebAuthnCredential: Model, Content {
 
     init() {}
 
-    init(id: String, publicKey: String, currentSignCount: UInt32, userID: UUID) {
+    init(id: String, publicKey: String, currentSignCount: UInt32, name: String, userID: UUID) {
         self.id = id
         self.publicKey = publicKey
         self.currentSignCount = currentSignCount
+        self.name = name
         self.$user.id = userID
     }
 
-    convenience init(from credential: Credential, userID: UUID) {
+    convenience init(from credential: Credential, name: String, userID: UUID) {
         self.init(
             id: credential.id,
             publicKey: credential.publicKey.base64URLEncodedString().asString(),
             currentSignCount: credential.signCount,
+            name: name,
             userID: userID
         )
     }

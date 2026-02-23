@@ -1,0 +1,59 @@
+#extend("base"):
+  #export("body"):
+    <div class="flex flex-col justify-center gap-6">
+      <div>
+        <h2 class="mt-2 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">KV Manager</h2>
+        <p class="mt-2 text-center text-sm text-gray-600">Manage key-value pairs for <span class="font-semibold">#(username)</span></p>
+      </div>
+
+      <div class="flex gap-3 justify-center">
+        <a href="/private" class="btn-soft">Back to Private</a>
+        <button id="refreshKvButton" type="button" class="btn-soft hidden">Refresh</button>
+      </div>
+
+      <form id="updateKvForm" class="space-y-3">
+        <h3 class="text-lg font-semibold text-gray-900">Update</h3>
+        <div>
+          <label for="updateKey" class="block font-medium leading-6 text-gray-600">Key</label>
+          <input id="updateKey" type="text" class="block w-full rounded-lg border-0 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-fuchsia-800">
+        </div>
+        <div>
+          <label for="updateValue" class="block font-medium leading-6 text-gray-600">New value</label>
+          <input id="updateValue" type="text" class="block w-full rounded-lg border-0 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-fuchsia-800">
+        </div>
+        <button type="submit" class="btn-primary w-full justify-center">Update</button>
+      </form>
+
+      <form id="getKvForm" class="space-y-3">
+        <h3 class="text-lg font-semibold text-gray-900">Get</h3>
+        <div>
+          <label for="getKey" class="block font-medium leading-6 text-gray-600">Key</label>
+          <input id="getKey" type="text" class="block w-full rounded-lg border-0 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-fuchsia-800">
+        </div>
+        <button type="submit" class="btn-soft w-full justify-center">Fetch One</button>
+      </form>
+
+      <form id="deleteKvForm" class="space-y-3">
+        <h3 class="text-lg font-semibold text-gray-900">Delete</h3>
+        <div>
+          <label for="deleteKey" class="block font-medium leading-6 text-gray-600">Key</label>
+          <input id="deleteKey" type="text" class="block w-full rounded-lg border-0 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-fuchsia-800">
+        </div>
+        <button type="submit" class="btn-soft w-full justify-center">Delete</button>
+      </form>
+
+      <section class="space-y-2">
+        <h3 class="text-lg font-semibold text-gray-900">Current Entries</h3>
+        <p id="kvStatus" class="text-sm text-gray-700"></p>
+        <ul id="kvList" class="space-y-2"></ul>
+      </section>
+
+      <section class="space-y-2">
+        <h3 class="text-lg font-semibold text-gray-900">Output</h3>
+        <pre id="kvOutput" class="text-xs bg-gray-100 rounded-lg p-3 overflow-x-auto text-gray-800"></pre>
+      </section>
+    </div>
+
+    <script type="application/javascript" src="/scripts/kvManager.js"></script>
+  #endexport
+#endextend
