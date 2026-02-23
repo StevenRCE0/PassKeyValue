@@ -1,4 +1,4 @@
-// swift-tools-version:6.2.0
+// swift-tools-version:6.2.3
 import PackageDescription
 
 let package = Package(
@@ -14,8 +14,9 @@ let package = Package(
         .package(
             url: "https://github.com/m-barthelemy/vapor-queues-fluent-driver.git",
             from: "3.0.0-beta1"),
-        .package(url: "https://github.com/swift-server/webauthn-swift.git", from: "1.0.0-alpha"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
+        .package(url: "https://github.com/swift-server/webauthn-swift.git", from: "1.0.0-alpha"),
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
     ],
     targets: [
         .executableTarget(

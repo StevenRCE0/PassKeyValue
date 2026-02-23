@@ -34,3 +34,17 @@ Then run the following to generate Tailwind CSS classes and watch for changes:
 ```
 
 > Do not edit `Public/styles/tailwind.css` manually as it will be overwritten by the above command!
+
+## Documentation
+
+Project documentation is available in the DocC catalog at:
+
+- `Sources/App/App.docc/App.md`
+
+If your local Swift setup supports the `generate-documentation` command, you can build static docs with:
+
+```bash
+swift package --allow-writing-to-directory ./docs \
+  generate-documentation --target App \
+  --output-path ./docs
+```
