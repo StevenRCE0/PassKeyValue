@@ -39,7 +39,7 @@ function renderList(items) {
   items.forEach((item) => {
     const row = document.createElement("li");
     row.className =
-      "flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2";
+      "flex items-center justify-between rounded-lg border border-gray-200 bg-slate-50 px-3 py-2";
 
     const label = document.createElement("p");
     label.className = "text-sm text-gray-900 truncate";

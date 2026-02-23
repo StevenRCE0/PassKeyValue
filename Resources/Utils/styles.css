@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer components {
     .btn-primary {
@@ -8,6 +6,10 @@
     }
 
     .btn-soft {
-        @apply flex gap-2 w-full items-center justify-center rounded-lg bg-slate-100 px-6 py-3 font-medium leading-6 text-gray-700 shadow-sm hover:bg-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-200;
+        @apply flex gap-2 w-full items-center justify-center rounded-lg bg-slate-50 px-6 py-3 font-medium leading-6 text-gray-700 shadow-sm hover:bg-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-200;
     }
+}
+
+input {
+    @apply bg-slate-50 px-4;
 }

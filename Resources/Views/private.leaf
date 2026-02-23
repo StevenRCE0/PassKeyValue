@@ -6,7 +6,7 @@
         <p class="mt-2 text-center text-sm text-gray-600">Logged in with <span class="font-semibold">#(username)</span></p>
       </div>
 
-      <form id="mergeChoiceForm" class="flex flex-col justify-center space-y-3 gap-3">
+      <form id="mergeChoiceForm" class="flex flex-col justify-center gap-2">
         <button type="button" data-merge-action="registration" class="btn-soft w-full justify-center">
           Create another passkey
         </button>
