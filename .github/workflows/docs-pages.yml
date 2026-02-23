@@ -1,59 +1,64 @@
 name: Deploy DocC to GitHub Pages
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "Sources/**"
-      - "Package.swift"
-      - "Package.resolved"
-      - ".swift-version"
-      - ".github/workflows/docs-pages.yml"
-  workflow_dispatch:
+    push:
+        branches: ["main"]
+        paths:
+            - "Sources/**"
+            - "Package.swift"
+            - "Package.resolved"
+            - ".swift-version"
+            - ".github/workflows/docs-pages.yml"
+    workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+    contents: read
+    pages: write
+    id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: true
+    group: "pages"
+    cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    build:
+        runs-on: macos-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Generate DocC static site
-        run: |
-          swift package \
-            --allow-writing-to-directory ./docs \
-            generate-documentation \
-            --target App \
-            --disable-indexing \
-            --transform-for-static-hosting \
-            --hosting-base-path "${GITHUB_REPOSITORY#*/}" \
-            --output-path ./docs
-          touch ./docs/.nojekyll
+            - name: Setup Swift
+              uses: swift-actions/setup-swift@v2
+              with:
+                  swift-version: "6.2.3"
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+            - name: Generate DocC static site
+              run: |
+                  swift package \
+                    --allow-writing-to-directory ./docs \
+                    generate-documentation \
+                    --target App \
+                    --disable-indexing \
+                    --transform-for-static-hosting \
+                    --hosting-base-path "${GITHUB_REPOSITORY#*/}" \
+                    --output-path ./docs
+                  touch ./docs/.nojekyll
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./docs
+            - name: Setup Pages
+              uses: actions/configure-pages@v5
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+            - name: Upload Pages artifact
+              uses: actions/upload-pages-artifact@v4
+              with:
+                  path: ./docs
+
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
