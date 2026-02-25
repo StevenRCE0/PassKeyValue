@@ -23,8 +23,8 @@ public func configure(_ app: Application) throws {
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
     // apply app session
+    app.sessions.configuration.cookieName = "passkv_session"
     app.middleware.use(app.sessions.middleware)
-    app.sessions.use(.fluent)
 
     if app.environment == .testing {
         app.databases.use(
@@ -34,6 +34,8 @@ public func configure(_ app: Application) throws {
         app.databases.use(
             .sqlite(.file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")), as: .sqlite)
     }
+
+    app.sessions.use(.fluent)
 
     app.migrations.add(JobMetadataMigrate())
     app.migrations.add(SessionRecord.migration)
