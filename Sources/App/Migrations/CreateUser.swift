@@ -7,7 +7,6 @@ struct CreateUser: AsyncMigration {
             .field("username", .string, .required)
             .field("created_at", .datetime, .required)
             .field("storage", .custom(User.KVType()), .required)
-            .unique(on: "username")
             .create()
     }
 

@@ -22,9 +22,8 @@ public func configure(_ app: Application) throws {
     app.middleware.use(cors, at: .beginning)
     app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
-    // apply app session
+    // Configure the session driver before adding session middleware.
     app.sessions.configuration.cookieName = "passkv_session"
-    app.middleware.use(app.sessions.middleware)
 
     if app.environment == .testing {
         app.databases.use(
@@ -36,6 +35,7 @@ public func configure(_ app: Application) throws {
     }
 
     app.sessions.use(.fluent)
+    app.middleware.use(app.sessions.middleware)
 
     app.migrations.add(JobMetadataMigrate())
     app.migrations.add(SessionRecord.migration)
