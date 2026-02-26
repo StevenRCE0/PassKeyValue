@@ -3,7 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>#(title) · PassKeyValue</title>
+    <title>PassKeyValue</title>
+    <meta name="description" content="Passkey-based KV storage.">
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="PassKeyValue">
+    <meta property="og:title" content="#(title) · PassKeyValue">
+    <meta property="og:description" content="Passkey-based KV storage.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="/apple-touch-icon.png">
 
     <!-- Favicons -->
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
