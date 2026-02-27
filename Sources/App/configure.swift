@@ -12,7 +12,8 @@ public func configure(_ app: Application) throws {
         allowedOrigin: .all,
         allowedMethods: [.GET, .POST, .PUT, .OPTIONS, .DELETE, .PATCH],
         allowedHeaders: [
-            .accept, .authorization, .contentType, .origin, .xRequestedWith, .userAgent,
+            .accept, .authorization, .contentType, .origin, .xRequestedWith,
+            .userAgent,
             .accessControlAllowOrigin, .accessControlAllowCredentials,
         ],
         allowCredentials: true
@@ -20,18 +21,35 @@ public func configure(_ app: Application) throws {
     let cors = CORSMiddleware(configuration: corsConfiguration)
 
     app.middleware.use(cors, at: .beginning)
-    app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
+    app.middleware.use(
+        FileMiddleware(publicDirectory: app.directory.publicDirectory)
+    )
 
     // Configure the session driver before adding session middleware.
     app.sessions.configuration.cookieName = "passkv_session"
+    app.sessions.configuration.cookieFactory = { sessionID in
+        .init(
+            string: sessionID.string,
+            isSecure: app.environment == .production,
+            isHTTPOnly: true
+        )
+    }
 
     if app.environment == .testing {
         app.databases.use(
-            .sqlite(.file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")), as: .sqlite)
+            .sqlite(
+                .file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")
+            ),
+            as: .sqlite
+        )
     } else {
         // app.databases.use(.sqlite(.memory), as: .sqlite)
         app.databases.use(
-            .sqlite(.file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")), as: .sqlite)
+            .sqlite(
+                .file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")
+            ),
+            as: .sqlite
+        )
     }
 
     app.sessions.use(.fluent)
@@ -52,8 +70,10 @@ public func configure(_ app: Application) throws {
     app.webAuthn = WebAuthnManager(
         configuration: WebAuthnManager.Configuration(
             relyingPartyID: Environment.get("RP_ID") ?? "localhost",
-            relyingPartyName: Environment.get("RP_DISPLAY_NAME") ?? "Vapor Passkey Demo",
-            relyingPartyOrigin: Environment.get("RP_ORIGIN") ?? "http://localhost:8080"
+            relyingPartyName: Environment.get("RP_DISPLAY_NAME")
+                ?? "PassKeyValue",
+            relyingPartyOrigin: Environment.get("RP_ORIGIN")
+                ?? "http://localhost:8080"
         )
     )
 
