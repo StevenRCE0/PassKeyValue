@@ -1,6 +1,6 @@
-import Vapor
-import Queues
 import Fluent
+import Queues
+import Vapor
 
 struct DeleteUsersJob: AsyncScheduledJob {
     func run(context: QueueContext) async throws {
