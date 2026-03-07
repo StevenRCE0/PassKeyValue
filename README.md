@@ -57,6 +57,7 @@ All routes are currently registered in `Sources/App/routes.swift` via:
 | --- | --- | --- | --- |
 | `POST` | `/begin` | Optional | Starts `registration` or `authentication`. Returns WebAuthn options. |
 | `POST` | `/continue` | Optional/Contextual | Completes the started passkey flow and logs in the user when successful. |
+| `GET` | `/verify` | Yes | Verifies that the current session cookie is still authenticated. |
 | `GET` | `/passkeys` | Yes | Lists passkeys for current session user. |
 | `DELETE` | `/passkeys/:credentialID` | Yes | Deletes one passkey (cannot delete the last remaining passkey). |
 

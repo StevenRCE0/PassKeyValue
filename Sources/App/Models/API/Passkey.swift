@@ -35,6 +35,12 @@ struct ContinuePasskeyResponse: Encodable {
     let passkeys: [PasskeySummary]
 }
 
+struct VerifyPasskeyResponse: Content {
+    let status: String
+    let userID: UUID
+    let passkeys: [PasskeySummary]
+}
+
 struct PasskeyListResponse: Content {
     let userID: UUID
     let passkeys: [PasskeySummary]

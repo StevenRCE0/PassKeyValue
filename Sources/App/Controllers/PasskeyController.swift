@@ -13,6 +13,7 @@ struct PasskeyController: RouteCollection {
         let authSessionRoutes = routes.grouped(User.sessionAuthenticator())
         authSessionRoutes.post("begin", use: beginHandler)
         authSessionRoutes.post("continue", use: continueHandler)
+        authSessionRoutes.get("verify", use: verifyHandler)
         authSessionRoutes.get("passkeys", use: listPasskeysHandler)
         authSessionRoutes.delete("passkeys", ":credentialID", use: deletePasskeyHandler)
     }
