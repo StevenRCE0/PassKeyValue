@@ -32,6 +32,11 @@ Environment variables:
 | `RP_ID` | `localhost` | WebAuthn relying party ID |
 | `RP_ORIGIN` | `http://localhost:8080` | WebAuthn relying party origin |
 | `RP_DISPLAY_NAME` | `Vapor Passkey Demo` | Display name shown in authenticators |
+| `APN_HANDLE_SECRET` | none | 32-byte-plus secret used to seal opaque APN wake handles |
+| `APN_KEY_ID` | none | Apple APNs auth key ID |
+| `APN_TEAM_ID` | none | Apple Developer team ID |
+| `APN_PRIVATE_KEY_PATH` | none | Preferred filesystem path to `AuthKey_<KEYID>.p8` |
+| `APN_PRIVATE_KEY_PEM` | none | Fallback inline PEM for the APNs auth key |
 | `APPLE_APP_IDENTIFIER` | `com.example.app` | Enables `/.well-known/apple-app-site-association` response |
 
 ## Endpoint Reference (Latest)
@@ -40,6 +45,7 @@ All routes are currently registered in `Sources/App/routes.swift` via:
 - `TestViewController`
 - `PasskeyController`
 - `KVController`
+- `APNController`
 - `WellKnownController`
 
 ### UI and Session Routes
@@ -125,6 +131,15 @@ Response shapes:
 - get: `{ "item": { "key": "...", "value": "..." } }`
 - upsert: `{ "item": { "key": "...", "value": "..." } }`
 - delete: `{ "deletedKey": "...", "present": { "remainingKey": "value" } }`
+
+### APN API
+
+The APN wake routes are stateless capability endpoints.
+
+| Method | Path | Auth | Description |
+| --- | --- | --- | --- |
+| `POST` | `/api/apn/mint` | No | Mint opaque wake handles from an APNs token and scopes |
+| `POST` | `/api/apn/send` | No | Decrypt a wake handle and forward a visible APNs wake notification |
 
 ### Well-Known Route
 
