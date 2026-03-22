@@ -39,6 +39,126 @@ Environment variables:
 | `APN_PRIVATE_KEY_PEM` | none | Fallback inline PEM for the APNs auth key |
 | `APPLE_APP_IDENTIFIER` | `com.example.app` | Enables `/.well-known/apple-app-site-association` response |
 
+## Docker
+
+Build the image:
+
+```bash
+docker build -t passkeyvalue:latest .
+```
+
+Run it with runtime env passed from Compose or your orchestrator, not baked into the image:
+
+```bash
+docker compose up --build app
+```
+
+Notes:
+- `docker-compose.yml` reads `.env` with `env_file` and passes the full runtime env through to the container.
+- the image stays generic; no app secrets are copied into it.
+- the default Compose setup stores SQLite at `/data/db.sqlite` on the `sqlite-data` volume.
+- if you need APNs, mount the `.p8` file read-only and set `APN_PRIVATE_KEY_PATH` to that mounted path.
+
+Example Compose mount for the APNs key:
+
+```yaml
+services:
+  app:
+    volumes:
+      - sqlite-data:/data
+      - ./secrets/AuthKey_ABC123XYZ.p8:/run/secrets/passkeyvalue/AuthKey_ABC123XYZ.p8:ro
+    environment:
+      APN_PRIVATE_KEY_PATH: /run/secrets/passkeyvalue/AuthKey_ABC123XYZ.p8
+```
+
+## GitHub Actions
+
+The repo now uses two minimal workflows:
+- `CI` runs `swift test` on pushes to `main` and on pull requests.
+- `Docker Hub` builds and pushes `passkeyvalue` to Docker Hub on pushes to `main`, on version tags like `v1.0.0`, and on manual dispatch.
+
+Set these GitHub repository secrets before enabling the Docker publish workflow:
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+
+The published image name defaults to:
+
+```text
+DOCKERHUB_USERNAME/passkeyvalue
+```
+
+## Kubernetes
+
+Create a Secret from the APNs `.p8` file:
+
+```bash
+kubectl create secret generic passkeyvalue-apn-key \
+  --from-file=AuthKey_ABC123XYZ.p8=/absolute/path/to/AuthKey_ABC123XYZ.p8
+```
+
+Then mount it and point `APN_PRIVATE_KEY_PATH` at the mounted file:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: passkeyvalue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: passkeyvalue
+  template:
+    metadata:
+      labels:
+        app: passkeyvalue
+    spec:
+      containers:
+        - name: app
+          image: passkeyvalue:latest
+          env:
+            - name: SQLITE_DATABASE_PATH
+              value: /data/db.sqlite
+            - name: RP_ID
+              value: example.com
+            - name: RP_ORIGIN
+              value: https://example.com
+            - name: RP_DISPLAY_NAME
+              value: PassKeyValue
+            - name: APN_HANDLE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: passkeyvalue-env
+                  key: APN_HANDLE_SECRET
+            - name: APN_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: passkeyvalue-env
+                  key: APN_KEY_ID
+            - name: APN_TEAM_ID
+              valueFrom:
+                secretKeyRef:
+                  name: passkeyvalue-env
+                  key: APN_TEAM_ID
+            - name: APN_PRIVATE_KEY_PATH
+              value: /var/run/secrets/passkeyvalue-apn/AuthKey_ABC123XYZ.p8
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /data
+            - name: apn-private-key
+              mountPath: /var/run/secrets/passkeyvalue-apn
+              readOnly: true
+      volumes:
+        - name: sqlite-data
+          persistentVolumeClaim:
+            claimName: passkeyvalue-sqlite
+        - name: apn-private-key
+          secret:
+            secretName: passkeyvalue-apn-key
+```
+
+If you want the mounted filename to stay stable, create the Secret with the exact `.p8` filename you plan to reference, or use `items` under the Secret volume to rename it explicitly.
+
 ## Endpoint Reference (Latest)
 
 All routes are currently registered in `Sources/App/routes.swift` via:

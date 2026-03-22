@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: passkeyvalue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: passkeyvalue
+  template:
+    metadata:
+      labels:
+        app: passkeyvalue
+    spec:
+      containers:
+        - name: app
+          image: passkeyvalue:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SQLITE_DATABASE_PATH
+              value: /data/db.sqlite
+            - name: RP_ID
+              value: example.com
+            - name: RP_ORIGIN
+              value: https://example.com
+            - name: RP_DISPLAY_NAME
+              value: PassKeyValue
+            - name: APPLE_APP_IDENTIFIER
+              value: TEAMID.com.example.app
+            - name: APN_HANDLE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: passkeyvalue-env
+                  key: APN_HANDLE_SECRET
+            - name: APN_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: passkeyvalue-env
+                  key: APN_KEY_ID
+            - name: APN_TEAM_ID
+              valueFrom:
+                secretKeyRef:
+                  name: passkeyvalue-env
+                  key: APN_TEAM_ID
+            - name: APN_PRIVATE_KEY_PATH
+              value: /var/run/secrets/passkeyvalue-apn/AuthKey_ABC123XYZ.p8
+          volumeMounts:
+            - name: sqlite-data
+              mountPath: /data
+            - name: apn-private-key
+              mountPath: /var/run/secrets/passkeyvalue-apn
+              readOnly: true
+      volumes:
+        - name: sqlite-data
+          persistentVolumeClaim:
+            claimName: passkeyvalue-sqlite
+        - name: apn-private-key
+          secret:
+            secretName: passkeyvalue-apn-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: passkeyvalue
+spec:
+  selector:
+    app: passkeyvalue
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
