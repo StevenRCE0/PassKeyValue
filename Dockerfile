@@ -4,6 +4,8 @@ ARG BINARY_NAME=App
 
 FROM swift:${SWIFT_VERSION}-${UBUNTU_VERSION} AS build
 
+ARG BINARY_NAME
+
 # Install OS updates and, if needed, sqlite3
 RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && apt-get -q update \
