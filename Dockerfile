@@ -1,5 +1,5 @@
-ARG SWIFT_VERSION=6.2
-ARG UBUNTU_VERSION=jammy
+ARG SWIFT_VERSION=6.3
+ARG UBUNTU_VERSION=noble
 ARG BINARY_NAME=App
 
 FROM swift:${SWIFT_VERSION}-${UBUNTU_VERSION} AS build
@@ -33,10 +33,10 @@ RUN swift build -c release --static-swift-stdlib
 WORKDIR /staging
 
 # Copy main executable to staging area
-RUN cp "$(swift build --package-path /build -c release --show-bin-path)/${BINARY_NAME}" ./"${BINARY_NAME}"
+RUN cp "/build/.build/release/${BINARY_NAME}" ./"${BINARY_NAME}"
 
 # Copy resources bundled by SPM to staging area
-RUN find -L "$(swift build --package-path /build -c release --show-bin-path)/" -regex '.*\.resources$' -exec cp -Ra {} ./ \;
+RUN find -L /build/.build/release -regex '.*\.resources$' -exec cp -Ra {} ./ \;
 
 # Copy any resources from the public directory and views directory if the directories exist
 # Ensure that by default, neither the directory nor any of its contents are writable.
