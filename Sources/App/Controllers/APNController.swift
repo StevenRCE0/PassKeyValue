@@ -80,54 +80,50 @@ struct APNController: RouteCollection {
         guard handlePayload.matches(payload.handle) else {
             throw Abort(.badRequest, reason: "Push wake handle mismatch.")
         }
-        switch payload.handle.purpose {
-            case .contextMessage:
-                guard
-                    let contextEnvelope = payload.contextEnvelope,
-                    payload.actionEnvelope == nil,
-                    contextEnvelope.contextID == payload.handle.contextID
-                else {
+        switch (payload.handle.purpose, payload.wake) {
+            case (.contextMessage, .context(let envelope)),
+                (.contextMessage, .revocation(let envelope)):
+                guard envelope.contextID == payload.handle.contextID else {
                     throw Abort(
                         .badRequest,
                         reason: "Context wake payload mismatch."
                     )
                 }
-            case .actionAuthorisation:
-                guard
-                    let actionEnvelope = payload.actionEnvelope,
-                    payload.contextEnvelope == nil
-                else {
-                    throw Abort(
-                        .badRequest,
-                        reason: "Action wake payload mismatch."
-                    )
-                }
-                guard actionEnvelope.recipientNodeID != actionEnvelope.senderNodeID
+            case (.actionAuthorisation, .action(let envelope)):
+                guard envelope.recipientNodeID != envelope.senderNodeID
                 else {
                     throw Abort(
                         .badRequest,
                         reason: "Action wake sender and recipient must differ."
                     )
                 }
+            case (.contextMessage, .action):
+                throw Abort(.badRequest, reason: "Context wake payload mismatch.")
+            case (.actionAuthorisation, .context),
+                (.actionAuthorisation, .revocation):
+                throw Abort(.badRequest, reason: "Action wake payload mismatch.")
         }
 
-        let requestPayload = APNPushRequestPayload(
-            handle: payload.handle,
-            contextEnvelope: payload.contextEnvelope,
-            actionEnvelope: payload.actionEnvelope
-        )
+        let requestPayload = APNPushRequestPayload(wake: payload.wake)
         let encodedPayload = try JSONEncoder().encode(requestPayload)
         guard encodedPayload.count <= 4096 else {
             throw Abort(.payloadTooLarge, reason: "APNs payload exceeds 4 KB.")
         }
 
+        let delivery: APNProvider.Delivery =
+            switch payload.wake {
+                case .context, .action:
+                    .alert(collapseID: collapseID(for: payload.handle))
+                case .revocation:
+                    .background
+            }
         let provider = try req.apnProvider()
         let response = try await provider.send(
             payload: encodedPayload,
             topic: handlePayload.topic,
             token: handlePayload.token,
             environment: handlePayload.environment,
-            collapseID: collapseID(for: payload.handle)
+            delivery: delivery
         )
 
         guard (200 ... 299).contains(response.status.code) else {
@@ -176,15 +172,17 @@ private struct APNSealedWakeHandle: Codable {
     }
 }
 
-private struct APNPushRequestPayload: Codable {
-    struct APS: Codable {
-        struct Alert: Codable {
+/// The APNs body. Each wake goes out under the one `userInfo` key the app
+/// reads it from.
+private struct APNPushRequestPayload: Encodable {
+    struct APS: Encodable {
+        struct Alert: Encodable {
             let title: String
             let body: String
         }
 
-        let alert: Alert
-        let sound: String
+        let alert: Alert?
+        let sound: String?
 
         enum CodingKeys: String, CodingKey {
             case alert
@@ -194,50 +192,63 @@ private struct APNPushRequestPayload: Codable {
         }
 
         let contentAvailable: Int
-        let mutableContent: Int
+        let mutableContent: Int?
+
+        /// Shown as-is only when the notification service extension can't
+        /// resolve the real preview.
+        static func alert(title: String, body: String) -> APS {
+            APS(
+                alert: Alert(title: title, body: body),
+                sound: "default",
+                contentAvailable: 1,
+                mutableContent: 1
+            )
+        }
+
+        /// Nothing to show: the app wakes and removes the notification the
+        /// revocation names.
+        static let silent = APS(
+            alert: nil,
+            sound: nil,
+            contentAvailable: 1,
+            mutableContent: nil
+        )
     }
 
-    let aps: APS
-    let ktContextWake: APNContextWakeEnvelope?
-    let ktActionWake: APNAsymmetricCipherEnvelope?
+    let wake: APNWakeSendRequest.Wake
 
     enum CodingKeys: String, CodingKey {
         case aps
         case ktContextWake = "kt_context_wake"
         case ktActionWake = "kt_action_wake"
+        case ktContextRevoke = "kt_context_revoke"
     }
 
-    init(
-        handle: APNWakeHandle,
-        contextEnvelope: APNContextWakeEnvelope?,
-        actionEnvelope: APNAsymmetricCipherEnvelope?
-    ) {
-        let fallbackTitle =
-            switch handle.purpose {
-                case .contextMessage:
-                    "New KeepTalking activity"
-                case .actionAuthorisation:
-                    "Action approval requested"
-            }
-        let fallbackBody =
-            switch handle.purpose {
-                case .contextMessage:
-                    "Open KeepTalking to sync the latest context activity."
-                case .actionAuthorisation:
-                    "Open KeepTalking to review and approve the remote action."
-            }
-
-        self.aps = APS(
-            alert: .init(
-                title: fallbackTitle,
-                body: fallbackBody
-            ),
-            sound: "default",
-            contentAvailable: 1,
-            mutableContent: 1
-        )
-        self.ktContextWake = contextEnvelope
-        self.ktActionWake = actionEnvelope
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch wake {
+            case .context(let envelope):
+                try container.encode(
+                    APS.alert(
+                        title: "New KeepTalking activity",
+                        body: "Open KeepTalking to sync the latest context activity."
+                    ),
+                    forKey: .aps
+                )
+                try container.encode(envelope, forKey: .ktContextWake)
+            case .action(let envelope):
+                try container.encode(
+                    APS.alert(
+                        title: "Action approval requested",
+                        body: "Open KeepTalking to review and approve the remote action."
+                    ),
+                    forKey: .aps
+                )
+                try container.encode(envelope, forKey: .ktActionWake)
+            case .revocation(let envelope):
+                try container.encode(APS.silent, forKey: .aps)
+                try container.encode(envelope, forKey: .ktContextRevoke)
+        }
     }
 }
 
@@ -301,12 +312,17 @@ private struct APNProvider {
         }
     }
 
+    enum Delivery {
+        case alert(collapseID: String)
+        case background
+    }
+
     func send(
         payload: Data,
         topic: String,
         token: String,
         environment: String,
-        collapseID: String
+        delivery: Delivery
     ) async throws -> ClientResponse {
         let host =
             switch environment {
@@ -325,9 +341,16 @@ private struct APNProvider {
         return try await client.post(uri) { request in
             request.headers.bearerAuthorization = .init(token: jwt)
             request.headers.add(name: "apns-topic", value: topic)
-            request.headers.add(name: "apns-push-type", value: "alert")
-            request.headers.add(name: "apns-priority", value: "10")
-            request.headers.add(name: "apns-collapse-id", value: collapseID)
+            switch delivery {
+                case .alert(let collapseID):
+                    request.headers.add(name: "apns-push-type", value: "alert")
+                    request.headers.add(name: "apns-priority", value: "10")
+                    request.headers.add(name: "apns-collapse-id", value: collapseID)
+                case .background:
+                    // APNs rejects a background push at any other priority.
+                    request.headers.add(name: "apns-push-type", value: "background")
+                    request.headers.add(name: "apns-priority", value: "5")
+            }
             request.headers.contentType = .json
             request.body = .init(data: payload)
         }

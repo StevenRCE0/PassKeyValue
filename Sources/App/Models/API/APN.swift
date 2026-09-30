@@ -35,9 +35,17 @@ struct APNWakeMintResponse: Content {
 }
 
 struct APNWakeSendRequest: Content {
+    /// What the push carries. `.context` and `.revocation` ride a context
+    /// handle, `.action` an action one.
+    enum Wake: Codable {
+        case context(envelope: APNContextWakeEnvelope)
+        case action(envelope: APNAsymmetricCipherEnvelope)
+        /// Takes back notifications for deleted messages, as a silent push.
+        case revocation(envelope: APNContextWakeEnvelope)
+    }
+
     let handle: APNWakeHandle
-    let contextEnvelope: APNContextWakeEnvelope?
-    let actionEnvelope: APNAsymmetricCipherEnvelope?
+    let wake: Wake
 }
 
 struct APNWakeSendResponse: Content {

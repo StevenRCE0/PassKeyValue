@@ -259,7 +259,7 @@ The APN wake routes are stateless capability endpoints.
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
 | `POST` | `/api/apn/mint` | No | Mint opaque wake handles from an APNs token and scopes |
-| `POST` | `/api/apn/send` | No | Decrypt a wake handle and forward a visible APNs wake notification |
+| `POST` | `/api/apn/send` | No | Decrypt a wake handle and forward its `wake`: `context` or `action` as a visible APNs notification, `revocation` as a silent background push that takes back notifications for deleted messages |
 
 ### Well-Known Route
 
