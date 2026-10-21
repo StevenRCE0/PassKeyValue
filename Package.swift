@@ -16,6 +16,7 @@ let package = Package(
             from: "3.0.0-beta1"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
         .package(url: "https://github.com/swift-server/webauthn-swift.git", from: "1.0.0-alpha"),
+        .package(url: "https://github.com/vapor/jwt.git", from: "5.0.0"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
     ],
     targets: [
@@ -30,6 +31,7 @@ let package = Package(
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "QueuesFluentDriver", package: "vapor-queues-fluent-driver"),
                 .product(name: "WebAuthn", package: "webauthn-swift"),
+                .product(name: "JWT", package: "jwt"),
             ],
             swiftSettings: swiftSettings
         ),

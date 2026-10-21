@@ -33,6 +33,13 @@ spec:
               value: PassKeyValue
             - name: APPLE_APP_IDENTIFIER
               value: TEAMID.com.example.app
+            - name: THIRD_PARTY_SERVICES
+              value: '{"keeptalking-gateway":{"name":"KeepTalking Plan","scopes":{"plan:link":"Link your subscription to this account","plan:access":"Use your plan on your other devices"}}}'
+            - name: THIRD_PARTY_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: passkeyvalue-env
+                  key: THIRD_PARTY_SIGNING_KEY
             - name: APN_HANDLE_SECRET
               valueFrom:
                 secretKeyRef:

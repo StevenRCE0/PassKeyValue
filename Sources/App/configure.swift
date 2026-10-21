@@ -1,12 +1,13 @@
 import Fluent
 import FluentSQLiteDriver
+import JWT
 import Leaf
 import QueuesFluentDriver
 import Vapor
 import WebAuthn
 
 // configures your application
-public func configure(_ app: Application) throws {
+public func configure(_ app: Application) async throws {
     // mandatory CORS settings
     let corsConfiguration = CORSMiddleware.Configuration(
         allowedOrigin: .all,
@@ -59,6 +60,7 @@ public func configure(_ app: Application) throws {
     app.migrations.add(SessionRecord.migration)
     app.migrations.add(CreateUser())
     app.migrations.add(CreateWebAuthnCredential())
+    app.migrations.add(CreateThirdPartyGrant())
 
     app.queues.use(.fluent())
     try app.queues.startInProcessJobs(on: .default)
@@ -77,5 +79,18 @@ public func configure(_ app: Application) throws {
     // register routes
     try routes(app)
 
-    try app.autoMigrate().wait()
+    // Third-party access (see ThirdPartyAccessController). Assertions need
+    // a signing key; grants can be managed without one.
+    let signingKey = try Environment.get("THIRD_PARTY_SIGNING_KEY")
+        .flatMap { $0.isEmpty ? nil : $0 }
+        .map { try ES256PrivateKey(pem: $0) }
+    if let signingKey {
+        await app.jwt.keys.add(ecdsa: signingKey, kid: ThirdPartyAccessController.kid)
+    }
+    let services = try Environment.get("THIRD_PARTY_SERVICES")
+        .flatMap { $0.isEmpty ? nil : $0 }
+        .map { try JSONDecoder().decode([String: ThirdPartyService].self, from: Data($0.utf8)) } ?? [:]
+    try app.register(collection: ThirdPartyAccessController(publicKey: signingKey?.publicKey, services: services))
+
+    try await app.autoMigrate()
 }

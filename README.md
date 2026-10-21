@@ -38,6 +38,30 @@ Environment variables:
 | `APN_PRIVATE_KEY_PATH` | none | Preferred filesystem path to `AuthKey_<KEYID>.p8` |
 | `APN_PRIVATE_KEY_PEM` | none | Fallback inline PEM for the APNs auth key |
 | `APPLE_APP_IDENTIFIER` | `com.example.app` | Enables `/.well-known/apple-app-site-association` response |
+| `THIRD_PARTY_SIGNING_KEY` | none | PEM P-256 private key that signs third-party assertions; also publishes `/.well-known/jwks.json` |
+| `THIRD_PARTY_SERVICES` | `{}` | JSON map of the services users can grant access to, with each one's scopes, e.g. `{"keeptalking-gateway":{"name":"KeepTalking Plan","scopes":{"plan:link":"Link your subscription to this account"}}}` |
+
+### Third-party access
+
+A user can let a configured service act on their account with some scopes,
+see which services have access, and revoke it at any time, at `/access` on
+the website or through the API. All of these need the session cookie:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/access/services` | Services and scopes that can be granted |
+| `POST /api/access/grants` `{"service","scopes"}` | Grant (or widen) access for a service |
+| `GET /api/access/grants` | Active grants |
+| `DELETE /api/access/grants/:id` | Revoke a grant |
+| `POST /api/access/assertions` `{"service","scopes"}` | A five-minute ES256 JWT for the service, within the grant |
+
+An assertion carries `sub` (account ID), `aud` (the service), `scope`
+(space-separated), `grant`, `iat`, `exp` and `jti`. The service verifies it
+against `/.well-known/jwks.json` and checks `aud` and the scope it needs; it
+never sees the cookie or a shared secret. Revoking stops new assertions at
+once, and any already issued lapse within five minutes. Grants can be listed
+and revoked without a signing key; assertions need one. Generate a key with
+`openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt`.
 
 ## Docker
 

@@ -24,8 +24,9 @@
         <ul id="passkeysList" class="space-y-2"></ul>
       </section>
 
-      <div class="flex justify-center">
+      <div class="flex justify-center gap-3">
         <a href="/kv" class="btn-soft">Open KV Manager</a>
+        <a href="/access" class="btn-soft">Third-Party Access</a>
       </div>
 
       <form id="mergeForm" class="space-y-4 hidden">
