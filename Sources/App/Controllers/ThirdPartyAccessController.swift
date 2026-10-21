@@ -20,7 +20,7 @@ struct ThirdPartyAccessController: RouteCollection {
 
     init(publicKey: ES256PublicKey?, services: [String: ThirdPartyService]) {
         jwks = publicKey?.parameters.map { x, y in
-            JWKS(keys: [.ecdsa(.es256, identifier: Self.kid, x: x, y: y, curve: .p256)])
+            JWKS(keys: [.ecdsa(.es256, identifier: Self.kid, x: x.base64URL, y: y.base64URL, curve: .p256)])
         }
         self.services = services
     }
@@ -148,5 +148,15 @@ struct ThirdPartyAccessController: RouteCollection {
             createdAt: grant.createdAt,
             lastUsedAt: grant.lastUsedAt
         )
+    }
+}
+
+private extension String {
+    /// JWK coordinates are base64url without padding (RFC 7518 §6.2.1);
+    /// JWTKit hands them over in standard base64.
+    var base64URL: String {
+        replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }

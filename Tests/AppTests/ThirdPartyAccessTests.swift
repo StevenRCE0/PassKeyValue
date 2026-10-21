@@ -83,6 +83,11 @@ struct ThirdPartyAccessTests {
             var jwks: JWKS?
             try await app.testing().test(.GET, "t/.well-known/jwks.json") { jwks = try $0.content.decode(JWKS.self) }
 
+            // Coordinates are base64url, as RFC 7518 requires.
+            let key = try #require(jwks?.keys.first)
+            for coordinate in [key.x, key.y] {
+                #expect(coordinate?.contains(where: { "+/=".contains($0) }) == false)
+            }
             // What a relying service does: the public key set only, no secret.
             let keys = try await JWTKeyCollection().add(jwks: #require(jwks))
             let payload = try await keys.verify(minted.assertion, as: ThirdPartyAssertion.self)

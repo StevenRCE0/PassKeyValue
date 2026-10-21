@@ -37,12 +37,9 @@ public func configure(_ app: Application) async throws {
     }
 
     if app.environment == .testing {
-        app.databases.use(
-            .sqlite(
-                .file(Environment.get("SQLITE_DATABASE_PATH") ?? "db.sqlite")
-            ),
-            as: .sqlite
-        )
+        // One in-memory database per test app, so suites running in
+        // parallel never race over the same tables.
+        app.databases.use(.sqlite(.memory), as: .sqlite)
     } else {
         // app.databases.use(.sqlite(.memory), as: .sqlite)
         app.databases.use(
