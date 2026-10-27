@@ -15,8 +15,7 @@ const kvOutputEl = document.getElementById("kvOutput");
 function setStatus(message, isError = false) {
   if (!kvStatusEl) return;
   kvStatusEl.textContent = message;
-  kvStatusEl.classList.toggle("text-red-600", isError);
-  kvStatusEl.classList.toggle("text-gray-700", !isError);
+  kvStatusEl.classList.toggle("is-error", isError);
 }
 
 function setOutput(payload) {
@@ -30,7 +29,7 @@ function renderList(items) {
 
   if (!items || items.length === 0) {
     const empty = document.createElement("li");
-    empty.className = "text-sm text-gray-500";
+    empty.className = "list-row text-sm muted";
     empty.textContent = "No entries yet.";
     kvListEl.appendChild(empty);
     return;
@@ -38,17 +37,15 @@ function renderList(items) {
 
   items.forEach((item) => {
     const row = document.createElement("li");
-    row.className =
-      "flex items-center justify-between rounded-lg border border-gray-200 bg-slate-50 px-3 py-2";
+    row.className = "list-row";
 
     const label = document.createElement("p");
-    label.className = "text-sm text-gray-900 truncate";
+    label.className = "truncate text-sm";
     label.textContent = `${item.key}: ${item.value}`;
 
     const action = document.createElement("button");
     action.type = "button";
-    action.className =
-      "rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50";
+    action.className = "btn-danger";
     action.textContent = "Delete";
     action.dataset.deleteKey = item.key;
 

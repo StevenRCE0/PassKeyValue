@@ -1,58 +1,57 @@
 #extend("base"):
   #export("body"):
-    <div class="flex flex-col justify-center gap-8">
+    <div class="flex flex-col gap-8">
       <div>
-        <h2 class="mt-2 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">PassKeyValue</h2>
-        <p class="mt-2 text-center text-sm text-gray-600">Logged in with <span class="font-semibold">#(username)</span></p>
+        <h1 class="title">Your account</h1>
+        <p class="subtitle">Signed in as <span class="emphasis">#(username)</span></p>
       </div>
 
-      <form id="mergeChoiceForm" class="flex flex-col justify-center gap-2">
-        <button type="button" data-merge-action="registration" class="btn-soft w-full justify-center">
-          Create another passkey
-        </button>
-        <button type="button" data-merge-action="existing" class="btn-soft w-full justify-center">
-          Merge with another account
-        </button>
-      </form>
+      <nav class="list">
+        <a href="/kv" class="list-row">
+          <span class="text-sm font-medium">Key-value storage</span>
+          <span class="muted">›</span>
+        </a>
+        <a href="/access" class="list-row">
+          <span class="text-sm font-medium">Third-party access</span>
+          <span class="muted">›</span>
+        </a>
+      </nav>
 
-      <section class="space-y-3">
+      <section class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">Your Passkeys</h3>
-          <button id="refreshPasskeysButton" type="button" class="btn-soft hidden">Refresh</button>
+          <h2 class="section-title">Passkeys</h2>
+          <button id="refreshPasskeysButton" type="button" class="link-action hidden">Refresh</button>
         </div>
-        <p id="passkeysStatus" class="text-sm text-gray-600"></p>
-        <ul id="passkeysList" class="space-y-2"></ul>
+        <p id="passkeysStatus" class="status"></p>
+        <ul id="passkeysList" class="list"></ul>
       </section>
 
-      <div class="flex justify-center gap-3">
-        <a href="/kv" class="btn-soft">Open KV Manager</a>
-        <a href="/access" class="btn-soft">Third-Party Access</a>
-      </div>
+      <form id="mergeChoiceForm" class="actions">
+        <button type="button" data-merge-action="registration" class="action">Add a passkey</button>
+        <button type="button" data-merge-action="existing" class="action">Merge accounts</button>
+      </form>
 
-      <form id="mergeForm" class="space-y-4 hidden">
+      <form id="mergeForm" class="flex flex-col gap-4 hidden">
         <input id="mergeBMode" name="mergeBMode" type="hidden" value="registration">
         <input id="mergeMode" name="mergeMode" type="hidden" value="keepCurrentUser">
         <div id="mergePasskeyNameContainer">
-          <label for="mergePasskeyName" class="block font-medium leading-6 text-gray-600">Name the Pass</label>
-          <div class="mt-2">
-            <input id="mergePasskeyName" name="mergePasskeyName" type="text" placeholder="My Passkey" class="block w-full rounded-lg border-0 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-fuchsia-800">
-          </div>
+          <label for="mergePasskeyName" class="label">Passkey name</label>
+          <input id="mergePasskeyName" name="mergePasskeyName" type="text" placeholder="My Passkey" class="field">
         </div>
-        <button type="submit" class="btn-primary w-full justify-center mt-6">Continue</button>
-        <button id="mergeBackButton" type="button" class="btn-soft w-full justify-center mt-2">Go back</button>
+        <div class="actions">
+          <button id="mergeBackButton" type="button" class="action">Go back</button>
+          <button type="submit" class="action action-primary">Continue</button>
+        </div>
       </form>
 
       <div class="space-y-2 hidden">
-        <h3 class="text-lg font-semibold text-gray-900">Output</h3>
-        <p id="status" class="text-sm text-gray-700"></p>
-        <pre id="output" class="text-xs bg-gray-100 rounded-lg p-3 overflow-x-auto text-gray-800"></pre>
+        <p id="status" class="status"></p>
+        <pre id="output" class="output"></pre>
       </div>
 
-      <div>
-        <form action="/logout" method="POST">
-          <button type="submit" class="btn-soft">Logout</button>
-        </form>
-      </div>
+      <form action="/logout" method="POST" class="actions card-actions">
+        <button type="submit" class="action">Sign out</button>
+      </form>
     </div>
 
     <script type="application/javascript" src="/scripts/base64.js"></script>

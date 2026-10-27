@@ -1,15 +1,166 @@
 @import "tailwindcss";
 
-@layer components {
-    .btn-primary {
-        @apply flex gap-2 w-full items-center justify-center rounded-lg bg-fuchsia-700 px-6 py-3 font-semibold leading-6 text-white shadow-sm hover:bg-fuchsia-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fuchsia-800;
+@theme {
+    --font-sans: "Raleway", -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-serif: "Instrument Serif", "Times New Roman", ui-serif, Georgia, serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    --color-paper: #f6f6f4;
+    --color-panel: #fbfbfa;
+    --color-ink: #0a0a0a;
+    --color-muted: #5a5a5a;
+    --color-faint: #888888;
+    --color-line: #dadad8;
+    --color-line-firm: #c7c7c5;
+    --color-wash: #ededeb;
+    --color-wash-faint: #f1f1ef;
+    --color-accent: #7949b0;
+}
+
+@layer base {
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --color-paper: #0e0e0d;
+            --color-panel: #151514;
+            --color-ink: #f2f2f0;
+            --color-muted: #a3a3a0;
+            --color-faint: #757573;
+            --color-line: #2a2a28;
+            --color-line-firm: #3a3a38;
+            --color-wash: #232321;
+            --color-wash-faint: #1b1b1a;
+            --color-accent: #b48ce6;
+        }
     }
 
-    .btn-soft {
-        @apply flex gap-2 w-full items-center justify-center rounded-lg bg-slate-50 px-6 py-3 font-medium leading-6 text-gray-700 shadow-sm hover:bg-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-200;
+    html {
+        @apply h-full bg-paper font-sans text-ink antialiased;
+    }
+
+    body {
+        @apply min-h-full;
     }
 }
 
-input {
-    @apply bg-slate-50 px-4;
+@layer components {
+    .page {
+        @apply relative isolate flex min-h-full flex-col items-center px-6 py-12 sm:py-20;
+    }
+
+    .page-glow {
+        @apply pointer-events-none absolute inset-x-0 top-0 -z-10 h-72 bg-gradient-to-b from-accent/[0.07] to-transparent;
+    }
+
+    .brand {
+        @apply font-serif text-3xl tracking-[-0.01em] text-ink;
+    }
+
+    .card {
+        @apply mt-10 w-full max-w-md border border-line bg-panel p-7 sm:p-9;
+    }
+
+    .title {
+        @apply font-serif text-4xl leading-[1.1] font-normal tracking-[-0.02em] text-ink;
+    }
+
+    .subtitle {
+        @apply mt-2 text-sm text-muted;
+    }
+
+    .section-title,
+    .label {
+        @apply text-[0.65rem] font-medium tracking-[0.16em] text-muted uppercase;
+    }
+
+    .label {
+        @apply mb-1 block;
+    }
+
+    .back-link {
+        @apply text-[0.65rem] font-medium tracking-[0.16em] text-muted uppercase transition-colors hover:text-ink;
+    }
+
+    .muted {
+        @apply text-muted;
+    }
+
+    .emphasis {
+        @apply font-medium text-ink;
+    }
+
+    .field {
+        @apply block w-full border-0 border-b border-line-firm bg-transparent px-0 py-2 text-sm text-ink transition-colors placeholder:text-faint focus:border-accent focus:ring-0 focus:outline-none;
+    }
+
+    .actions {
+        @apply grid auto-cols-fr grid-flow-col divide-x divide-line border border-line;
+    }
+
+    .card-actions {
+        @apply -mx-7 -mb-7 border-x-0 border-b-0 sm:-mx-9 sm:-mb-9;
+    }
+
+    .actions > form {
+        @apply flex;
+    }
+
+    .action {
+        @apply h-full w-full px-4 py-3.5 text-sm font-medium text-muted transition-colors hover:bg-wash-faint hover:text-ink focus-visible:bg-wash-faint focus-visible:outline-none disabled:opacity-50;
+    }
+
+    .action-primary {
+        @apply text-ink hover:text-accent focus-visible:text-accent;
+    }
+
+    .link-action {
+        @apply inline-flex items-center gap-1 self-start text-sm font-medium text-ink transition-colors hover:text-accent;
+    }
+
+    .link-action::after {
+        @apply content-['→'];
+    }
+
+    .btn-danger {
+        @apply shrink-0 text-xs font-medium text-red-700 transition-colors hover:underline hover:underline-offset-4 dark:text-red-300;
+    }
+
+    .list {
+        @apply divide-y divide-line border-y border-line;
+    }
+
+    .list-row {
+        @apply flex items-center justify-between gap-3 py-3;
+    }
+
+    a.list-row {
+        @apply transition-colors hover:text-accent;
+    }
+
+    .check {
+        @apply text-accent;
+    }
+
+    .status {
+        @apply text-sm text-muted;
+    }
+
+    .status.is-error {
+        @apply text-red-700 dark:text-red-300;
+    }
+
+    .status.is-ok {
+        @apply text-accent;
+    }
+
+    .output {
+        @apply overflow-x-auto border border-line bg-wash-faint p-3 font-mono text-xs font-light text-muted;
+    }
+
+    .footer {
+        @apply mt-10 flex gap-6 text-[0.65rem] tracking-[0.16em] text-muted uppercase;
+    }
+
+    .footer a {
+        @apply transition-colors hover:text-ink;
+    }
 }

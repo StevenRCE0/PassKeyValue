@@ -61,34 +61,8 @@ extension PasskeyController {
             req.session.data[PasskeySessionKey.userID] = nil
 
             let authenticationRequest = try req.content.decode(ContinueAuthenticationRequest.self)
-            let authenticationCredential = authenticationRequest.credential
-
-            guard
-                let providedCredential = try await WebAuthnCredential.query(on: req.db)
-                    .filter(\.$id == authenticationCredential.id.urlDecoded.asString())
-                    .with(\.$user)
-                    .first()
-            else {
-                throw Abort(.unauthorized, reason: "Credential not found.")
-            }
-
-            guard
-                let publicKeyData = URLEncodedBase64(providedCredential.publicKey).urlDecoded
-                    .decoded
-            else {
-                throw Abort(
-                    .internalServerError, reason: "Stored credential public key is invalid.")
-            }
-
-            let verifiedAuthentication = try req.webAuthn.finishAuthentication(
-                credential: authenticationCredential,
-                expectedChallenge: [UInt8](challenge),
-                credentialPublicKey: [UInt8](publicKeyData),
-                credentialCurrentSignCount: providedCredential.currentSignCount
-            )
-
-            providedCredential.currentSignCount = verifiedAuthentication.newSignCount
-            try await providedCredential.save(on: req.db)
+            let providedCredential = try await req.verifiedPasskey(
+                authenticationRequest.credential, challenge: [UInt8](challenge))
 
             let providedUserID = try providedCredential.user.requireID()
 
@@ -153,9 +127,7 @@ extension PasskeyController {
                     status: "merged", userID: mergedUserID, passkeys: passkeys)
             }
 
-            req.session.data[PasskeySessionKey.activeCredentialID] =
-                try providedCredential.requireID()
-            req.auth.login(providedCredential.user)
+            try req.signIn(with: providedCredential)
             let passkeys = try await passkeySummaries(for: providedUserID, on: req.db)
             return ContinuePasskeyResponse(
                 status: "authenticated", userID: providedUserID, passkeys: passkeys)

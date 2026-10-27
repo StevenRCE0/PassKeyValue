@@ -1,0 +1,42 @@
+#extend("base"):
+  #export("body"):
+    <div class="flex flex-col gap-6">
+      <div>
+        <h1 class="title">#(serviceName)</h1>
+        <p class="subtitle">would like to</p>
+      </div>
+
+      <ul class="list">
+        #for(scope in scopes):
+          <li class="list-row justify-start">
+            <span class="check">✓</span>
+            <span class="text-sm">#(scope.description)</span>
+          </li>
+        #endfor
+      </ul>
+
+      <div class="flex flex-col gap-1">
+        <p class="text-xs muted">You can revoke this at any time under Third-Party Access.</p>
+        <p id="status" class="status empty:hidden"></p>
+      </div>
+
+      <div class="actions card-actions">
+        <form action="/authorize" method="POST">
+          <input type="hidden" name="ticket" value="#(ticket)">
+          <input type="hidden" name="approve" value="false">
+          <button type="submit" class="action">Don’t Allow</button>
+        </form>
+        <form id="allow" action="/authorize" method="POST" data-options="#(requestOptions)">
+          <input type="hidden" name="ticket" value="#(ticket)">
+          <input type="hidden" name="approve" value="true">
+          <input type="hidden" name="credential">
+          <button type="submit" class="action action-primary">Allow with passkey</button>
+        </form>
+      </div>
+    </div>
+
+    <script type="application/javascript" src="/scripts/base64.js"></script>
+    <script type="application/javascript" src="/scripts/passkey/shared.js"></script>
+    <script type="application/javascript" src="/scripts/authorize.js"></script>
+  #endexport
+#endextend

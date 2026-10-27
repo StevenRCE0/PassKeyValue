@@ -1,37 +1,32 @@
 #extend("base"):
   #export("body"):
-    <div class="flex flex-col justify-center gap-6">
+    <div class="flex flex-col gap-6">
       <div>
-        <img class="mx-auto h-20 w-auto mb-3" src="/images/vapor-logo.svg" alt="Vapor logo">
-        <h2 class="mt-8 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Passkey API Tester</h2>
+        <h1 class="title">Welcome</h1>
+        <p class="subtitle">Sign in with a passkey, or create one.</p>
       </div>
-
-      <form id="authChoiceForm" class="flex flex-col justify-center gap-2">
-        <button type="button" data-auth-mode="registration" class="btn-soft w-full justify-center">
-          Create
-        </button>
-        <button type="button" data-auth-mode="authentication" class="btn-soft w-full justify-center">
-          Sign in
-        </button>
-      </form>
-
-      <form id="authForm" class="space-y-4 hidden">
-        <input id="mode" name="mode" type="hidden" value="registration">
-        <div id="authPasskeyNameContainer">
-          <label for="passkeyName" class="block font-medium leading-6 text-gray-600">Name the Pass</label>
-          <div class="mt-3">
-            <input id="passkeyName" name="passkeyName" type="text" placeholder="My Passkey" class="block w-full rounded-lg border-0 py-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-fuchsia-800">
-          </div>
-        </div>
-        <button type="submit" class="btn-primary w-full justify-center mt-6">Continue</button>
-        <button id="authBackButton" type="button" class="btn-soft w-full justify-center mt-2">Go back</button>
-      </form>
 
       <div class="space-y-2 hidden">
-        <h3 class="text-lg font-semibold text-gray-900">Output</h3>
-        <p id="status" class="text-sm text-gray-700"></p>
-        <pre id="output" class="text-xs bg-gray-100 rounded-lg p-3 overflow-x-auto text-gray-800"></pre>
+        <p id="status" class="status"></p>
+        <pre id="output" class="output"></pre>
       </div>
+
+      <form id="authChoiceForm" class="actions card-actions">
+        <button type="button" data-auth-mode="registration" class="action">Create a passkey</button>
+        <button type="button" data-auth-mode="authentication" class="action action-primary">Sign in</button>
+      </form>
+
+      <form id="authForm" class="flex flex-col gap-4 hidden">
+        <input id="mode" name="mode" type="hidden" value="registration">
+        <div id="authPasskeyNameContainer">
+          <label for="passkeyName" class="label">Passkey name</label>
+          <input id="passkeyName" name="passkeyName" type="text" placeholder="My Passkey" class="field">
+        </div>
+        <div class="actions card-actions mt-4">
+          <button id="authBackButton" type="button" class="action">Go back</button>
+          <button type="submit" class="action action-primary">Continue</button>
+        </div>
+      </form>
     </div>
 
     <script type="application/javascript" src="/scripts/base64.js"></script>

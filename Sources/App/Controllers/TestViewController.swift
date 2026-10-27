@@ -16,7 +16,7 @@ struct TestViewController: RouteCollection {
             return req.redirect(to: "/private")
         }
 
-        return try await req.view.render("index", ["title": "Passkey Tester"])
+        return try await req.view.render("index", ["title": "Sign In"])
             .encodeResponse(for: req)
     }
 
@@ -28,7 +28,7 @@ struct TestViewController: RouteCollection {
         return try await req.view.render(
             "private",
             [
-                "title": "Private Area",
+                "title": "Account",
                 "username": user.username,
             ])
     }
@@ -41,7 +41,7 @@ struct TestViewController: RouteCollection {
         return try await req.view.render(
             "kv",
             [
-                "title": "KV Manager",
+                "title": "Key-Value Storage",
                 "username": user.username,
             ])
     }

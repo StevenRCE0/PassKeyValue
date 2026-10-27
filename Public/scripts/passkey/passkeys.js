@@ -4,8 +4,7 @@
   function setPasskeysStatus(ctx, message, isError = false) {
     if (!ctx.passkeysStatusEl) return;
     ctx.passkeysStatusEl.textContent = message;
-    ctx.passkeysStatusEl.classList.toggle("text-red-600", isError);
-    ctx.passkeysStatusEl.classList.toggle("text-gray-600", !isError);
+    ctx.passkeysStatusEl.classList.toggle("is-error", isError);
   }
 
   function formatCredentialID(credentialID) {
@@ -20,7 +19,7 @@
 
     if (!passkeys || passkeys.length === 0) {
       const item = document.createElement("li");
-      item.className = "text-sm text-gray-500";
+      item.className = "list-row text-sm muted";
       item.textContent = "No passkeys found.";
       ctx.passkeysListEl.appendChild(item);
       return;
@@ -28,18 +27,17 @@
 
     passkeys.forEach((passkey) => {
       const item = document.createElement("li");
-      item.className =
-        "flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2";
+      item.className = "list-row";
 
       const details = document.createElement("div");
       details.className = "min-w-0";
 
       const name = document.createElement("p");
-      name.className = "truncate text-sm font-medium text-gray-900";
+      name.className = "truncate text-sm font-medium";
       name.textContent = passkey.name || "Unnamed passkey";
 
       const credential = document.createElement("p");
-      credential.className = "truncate text-xs text-gray-500";
+      credential.className = "truncate text-xs muted";
       credential.textContent = formatCredentialID(passkey.id);
 
       details.appendChild(name);
@@ -47,8 +45,7 @@
 
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
-      deleteButton.className =
-        "rounded-md border border-red-200 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50";
+      deleteButton.className = "btn-danger";
       deleteButton.textContent = "Delete";
       deleteButton.dataset.passkeyDelete = passkey.id;
       deleteButton.dataset.passkeyName = passkey.name || "this passkey";

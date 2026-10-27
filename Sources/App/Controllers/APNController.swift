@@ -509,7 +509,7 @@ private extension Request {
     }
 }
 
-private extension Data {
+extension Data {
     func base64URLEncodedString() -> String {
         base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")

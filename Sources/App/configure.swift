@@ -58,11 +58,14 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateUser())
     app.migrations.add(CreateWebAuthnCredential())
     app.migrations.add(CreateThirdPartyGrant())
+    app.migrations.add(CreateAuthorisationCode())
+    app.migrations.add(CreateRefreshToken())
 
     app.queues.use(.fluent())
     try app.queues.startInProcessJobs(on: .default)
 
     app.views.use(.leaf)
+    app.leaf.tags["instanceDomain"] = InstanceDomainTag(domain: Environment.get("RP_ID") ?? "localhost")
     app.webAuthn = WebAuthnManager(
         configuration: WebAuthnManager.Configuration(
             relyingPartyID: Environment.get("RP_ID") ?? "localhost",
@@ -76,8 +79,6 @@ public func configure(_ app: Application) async throws {
     // register routes
     try routes(app)
 
-    // Third-party access (see ThirdPartyAccessController). Assertions need
-    // a signing key; grants can be managed without one.
     let signingKey = try Environment.get("THIRD_PARTY_SIGNING_KEY")
         .flatMap { $0.isEmpty ? nil : $0 }
         .map { try ES256PrivateKey(pem: $0) }
@@ -88,6 +89,9 @@ public func configure(_ app: Application) async throws {
         .flatMap { $0.isEmpty ? nil : $0 }
         .map { try JSONDecoder().decode([String: ThirdPartyService].self, from: Data($0.utf8)) } ?? [:]
     try app.register(collection: ThirdPartyAccessController(publicKey: signingKey?.publicKey, services: services))
+    if signingKey != nil {
+        try app.register(collection: AuthorisationController(services: services))
+    }
 
     try await app.autoMigrate()
 }

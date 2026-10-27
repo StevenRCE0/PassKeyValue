@@ -8,8 +8,8 @@
   ns.setStatus = function setStatus(ctx, message, isError = false) {
     if (!ctx.statusEl) return;
     ctx.statusEl.textContent = message;
-    ctx.statusEl.classList.toggle("text-red-600", isError);
-    ctx.statusEl.classList.toggle("text-green-700", !isError);
+    ctx.statusEl.classList.toggle("is-error", isError);
+    ctx.statusEl.classList.toggle("is-ok", !isError);
   };
 
   ns.setOutput = function setOutput(ctx, data) {

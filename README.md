@@ -39,28 +39,38 @@ Environment variables:
 | `APN_PRIVATE_KEY_PEM` | none | Fallback inline PEM for the APNs auth key |
 | `APPLE_APP_IDENTIFIER` | `com.example.app` | Enables `/.well-known/apple-app-site-association` response |
 | `THIRD_PARTY_SIGNING_KEY` | none | PEM P-256 private key that signs third-party assertions; also publishes `/.well-known/jwks.json` |
-| `THIRD_PARTY_SERVICES` | `{}` | JSON map of the services users can grant access to, with each one's scopes, e.g. `{"keeptalking-gateway":{"name":"KeepTalking Plan","scopes":{"plan:link":"Link your subscription to this account"}}}` |
+| `THIRD_PARTY_SERVICES` | `{}` | JSON map of the services users can authorise, each with its scopes, redirect URIs and optional revocation URL, e.g. `{"keeptalking-gateway":{"name":"KeepTalking Plan","scopes":{"plan:link":"Link your subscription to this account"},"redirectURIs":["ktpasskv://authorized"],"revocationURL":"https://gateway.example.com/v1/passkv/revocations"}}` |
 
 ### Third-party access
 
-A user can let a configured service act on their account with some scopes,
-see which services have access, and revoke it at any time, at `/access` on
-the website or through the API. All of these need the session cookie:
+PassKeyValue is an OAuth 2.0 authorisation server for the configured
+services: the authorisation code flow with PKCE (`S256`), one grant per
+device.
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /api/access/services` | Services and scopes that can be granted |
-| `POST /api/access/grants` `{"service","scopes"}` | Grant (or widen) access for a service |
-| `GET /api/access/grants` | Active grants |
-| `DELETE /api/access/grants/:id` | Revoke a grant |
-| `POST /api/access/assertions` `{"service","scopes"}` | A five-minute ES256 JWT for the service, within the grant |
+| `GET /authorize?response_type=code&client_id&redirect_uri&scope&state&code_challenge&code_challenge_method=S256` | Consent page |
+| `POST /authorize` | The page's answer: Allow with a passkey, or Don't Allow |
+| `POST /oauth/token` `grant_type=authorization_code` | Trades the code (60 seconds, single use) for tokens |
+| `POST /oauth/token` `grant_type=refresh_token` | A new access token and refresh token |
+| `POST /oauth/revoke` `token&client_id` | The device gives its grant back |
+| `GET /.well-known/jwks.json` | Keys that verify access tokens and revocation notices |
 
-An assertion carries `sub` (account ID), `aud` (the service), `scope`
-(space-separated), `grant`, `iat`, `exp` and `jti`. The service verifies it
-against `/.well-known/jwks.json` and checks `aud` and the scope it needs; it
-never sees the cookie or a shared secret. Revoking stops new assertions at
-once, and any already issued lapse within five minutes. Grants can be listed
-and revoked without a signing key; assertions need one. Generate a key with
+The consent page carries a signed, five-minute ticket holding the request
+and a fresh passkey challenge. Allowing means answering that challenge with
+a passkey, which also signs the browser in as that account.
+
+An access token is a five-minute ES256 JWT carrying `sub` (account ID),
+`aud` (the service), `scope`, `grant`, `iat`, `exp` and `jti`. A refresh
+token works once; presenting a spent one revokes the grant.
+
+Users see and revoke their grants at `/access`, or through
+`GET /api/access/grants` and `DELETE /api/access/grants/:id` with the session
+cookie. When a grant ends, PassKeyValue posts a signed `application/jwt`
+notice (`sub`, `aud`, `scope`, `grant`, `revoked_at`) to the service's
+`revocationURL`, retrying for a few minutes.
+
+Generate a key with
 `openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt`.
 
 ## Docker
