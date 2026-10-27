@@ -68,9 +68,8 @@ are its own. Skipping consent depends on how the answer comes back, not only
 on the domain: an allowlisted app that answers the passkey challenge natively
 (the Authorization Challenge Endpoint, which needs the app in
 `webcredentials`) gets no consent page, because the OS hands the result straight back to it. On the web page
-an allowlisted app still asks ("Sign in to … on this computer?"), with every
-scope required, since any program on the computer could have started that
-request. Every other app gets the consent page, where shared data is
+an allowlisted app still asks, with every scope required, since any program
+on the device could have started that request. Every other app gets the consent page, where shared data is
 optional. Either way, an app gets a scoped grant it can lose, never a
 session.
 

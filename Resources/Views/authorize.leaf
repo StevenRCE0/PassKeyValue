@@ -2,13 +2,8 @@
   #export("body"):
     <div class="flex flex-col gap-6">
       <div>
-        #if(allowlisted):
-          <h1 class="title">Sign in to #(serviceName) on this computer?</h1>
-          <p class="subtitle"><span class="emphasis">#(serviceDomain)</span> will be able to</p>
-        #else:
-          <h1 class="title">#(serviceName)</h1>
-          <p class="subtitle"><span class="emphasis">#(serviceDomain)</span> would like to</p>
-        #endif
+        <h1 class="title">#(serviceName)</h1>
+        <p class="subtitle"><span class="emphasis">#(serviceDomain)</span> would like to</p>
       </div>
 
       <ul class="list">

@@ -20,10 +20,9 @@ struct AuthorisationController: RouteCollection {
     // MARK: - Authorise page
 
     struct ConsentPage: Encodable {
-        let title: String
+        let title = "Authorise"
         let serviceName: String
         let serviceDomain: String
-        let allowlisted: Bool
         let scopes: [ThirdPartyScope]
         let ticket: String
         let requestOptions: String
@@ -40,10 +39,8 @@ struct AuthorisationController: RouteCollection {
         return try await req.view.render(
             "authorize",
             ConsentPage(
-                title: ticket.allowlisted ? "Sign In" : "Authorise",
                 serviceName: ticket.serviceName,
                 serviceDomain: URL(string: ticket.service)?.host ?? ticket.service,
-                allowlisted: ticket.allowlisted,
                 scopes: ticket.scopes.map {
                     ThirdPartyScope(
                         id: $0, description: ticket.scopeDescriptions[$0] ?? $0,

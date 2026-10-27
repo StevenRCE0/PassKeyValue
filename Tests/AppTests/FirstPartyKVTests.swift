@@ -203,7 +203,8 @@ struct FirstPartyKVTests {
             let page = try await send(
                 instance, .GET, authorizePath(Self.first, scope: "kv kv:shared:read", pkce: pkce)
             ).body.string
-            #expect(page.contains("Sign in to KeepTalking on this computer?"))
+            #expect(page.contains("would like to"))
+            #expect(!page.contains("computer"))
             #expect(page.contains("Read your shared data"))
             #expect(page.contains("Allow with passkey"))
             #expect(!page.contains("scope-choice"))
