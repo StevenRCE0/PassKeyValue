@@ -1,12 +1,12 @@
 import Vapor
 
 struct KVEntry: Content {
-    let key: User.KVKeyType
-    let value: User.KVValueType
+    let key: String
+    let value: String
 }
 
 struct KVUpsertRequest: Content {
-    let value: User.KVValueType
+    let value: String
 }
 
 struct KVListResponse: Content {
@@ -26,6 +26,6 @@ struct KVUpdateResponse: Content {
 }
 
 struct KVDeleteResponse: Content {
-    let deletedKey: User.KVKeyType
-    let present: User.KVType
+    let deletedKey: String
+    let present: [String: String]
 }

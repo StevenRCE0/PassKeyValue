@@ -16,6 +16,15 @@ final class ThirdPartyGrant: Model, @unchecked Sendable {
     @Field(key: "scopes")
     var scopes: [String]
 
+    @OptionalField(key: "service_name")
+    var serviceName: String?
+
+    @OptionalField(key: "scope_descriptions")
+    var scopeDescriptions: [String: String]?
+
+    @OptionalField(key: "revocation_url")
+    var revocationURL: String?
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 
@@ -30,13 +39,16 @@ final class ThirdPartyGrant: Model, @unchecked Sendable {
 
     init() {}
 
-    init(userID: UUID, service: String, scopes: [String]) {
-        self.$user.id = userID
-        self.service = service
-        self.scopes = scopes.sorted()
+    init(approvedBy code: AuthorisationCode) {
+        self.$user.id = code.$user.id
+        service = code.service
+        scopes = code.scopes.sorted()
+        serviceName = code.serviceName
+        scopeDescriptions = code.scopeDescriptions
+        revocationURL = code.revocationURL
     }
 
-    func revoke(announcingTo revocationURL: String?, on db: any Database, app: Application) async throws {
+    func revoke(on db: any Database, app: Application) async throws {
         guard revokedAt == nil else { return }
         revokedAt = .now
         try await save(on: db)
@@ -65,6 +77,20 @@ struct CreateThirdPartyGrant: AsyncMigration {
     }
 }
 
+struct AddThirdPartyClientDetails: AsyncMigration {
+    func prepare(on database: any Database) async throws {
+        try await database.schema(ThirdPartyGrant.schema).field("service_name", .string).update()
+        try await database.schema(ThirdPartyGrant.schema).field("scope_descriptions", .dictionary(of: .string)).update()
+        try await database.schema(ThirdPartyGrant.schema).field("revocation_url", .string).update()
+    }
+
+    func revert(on database: any Database) async throws {
+        try await database.schema(ThirdPartyGrant.schema).deleteField("service_name").update()
+        try await database.schema(ThirdPartyGrant.schema).deleteField("scope_descriptions").update()
+        try await database.schema(ThirdPartyGrant.schema).deleteField("revocation_url").update()
+    }
+}
+
 // MARK: - Authorisation codes
 
 final class AuthorisationCode: Model, @unchecked Sendable {
@@ -86,6 +112,15 @@ final class AuthorisationCode: Model, @unchecked Sendable {
     @Field(key: "scopes")
     var scopes: [String]
 
+    @Field(key: "service_name")
+    var serviceName: String
+
+    @Field(key: "scope_descriptions")
+    var scopeDescriptions: [String: String]
+
+    @OptionalField(key: "revocation_url")
+    var revocationURL: String?
+
     @Field(key: "redirect_uri")
     var redirectURI: String
 
@@ -97,13 +132,16 @@ final class AuthorisationCode: Model, @unchecked Sendable {
 
     init() {}
 
-    static func issue(for ticket: AuthorisationTicket, userID: UUID) -> (AuthorisationCode, String) {
+    static func issue(for ticket: AuthorisationTicket, scopes: [String], userID: UUID) -> (AuthorisationCode, String) {
         let value = OpaqueToken.generate()
         let code = AuthorisationCode()
         code.codeHash = OpaqueToken.hash(value)
         code.$user.id = userID
         code.service = ticket.service
-        code.scopes = ticket.scopes
+        code.scopes = scopes
+        code.serviceName = ticket.serviceName
+        code.scopeDescriptions = ticket.scopeDescriptions.filter { scopes.contains($0.key) }
+        code.revocationURL = ticket.revocationURL
         code.redirectURI = ticket.redirectURI
         code.codeChallenge = ticket.codeChallenge
         code.expiresAt = .now.addingTimeInterval(lifetime)
@@ -123,6 +161,9 @@ struct CreateAuthorisationCode: AsyncMigration {
             .field("user_id", .uuid, .required, .references("users", "id", onDelete: .cascade))
             .field("service", .string, .required)
             .field("scopes", .array(of: .string), .required)
+            .field("service_name", .string, .required)
+            .field("scope_descriptions", .dictionary(of: .string), .required)
+            .field("revocation_url", .string)
             .field("redirect_uri", .string, .required)
             .field("code_challenge", .string, .required)
             .field("expires_at", .datetime, .required)

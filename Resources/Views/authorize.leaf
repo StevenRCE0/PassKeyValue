@@ -2,15 +2,28 @@
   #export("body"):
     <div class="flex flex-col gap-6">
       <div>
-        <h1 class="title">#(serviceName)</h1>
-        <p class="subtitle">would like to</p>
+        #if(allowlisted):
+          <h1 class="title">Sign in to #(serviceName) on this computer?</h1>
+          <p class="subtitle"><span class="emphasis">#(serviceDomain)</span> will be able to</p>
+        #else:
+          <h1 class="title">#(serviceName)</h1>
+          <p class="subtitle"><span class="emphasis">#(serviceDomain)</span> would like to</p>
+        #endif
       </div>
 
       <ul class="list">
         #for(scope in scopes):
           <li class="list-row justify-start">
-            <span class="check">✓</span>
-            <span class="text-sm">#(scope.description)</span>
+            #if(scope.isOptional):
+              <label class="flex cursor-pointer items-center gap-3">
+                <input type="checkbox" form="allow" name="scopes[]" value="#(scope.id)" class="scope-choice peer sr-only" checked>
+                <span class="check text-faint peer-checked:text-accent peer-focus-visible:underline">✓</span>
+                <span class="text-sm text-muted peer-checked:text-ink">#(scope.description) <span class="muted">· optional, tap to change</span></span>
+              </label>
+            #else:
+              <span class="check">✓</span>
+              <span class="text-sm">#(scope.description)</span>
+            #endif
           </li>
         #endfor
       </ul>
@@ -19,6 +32,17 @@
         <p class="text-xs muted">You can revoke this at any time under Third-Party Access.</p>
         <p id="status" class="status empty:hidden"></p>
       </div>
+
+      <details>
+        <summary class="link-action cursor-pointer">New here? Create a passkey</summary>
+        <form id="signup" class="mt-3 flex flex-col gap-3">
+          <div>
+            <label for="signupName" class="label">Name</label>
+            <input id="signupName" name="name" type="text" class="field" autocomplete="username" required>
+          </div>
+          <button type="submit" class="link-action">Create passkey and continue</button>
+        </form>
+      </details>
 
       <div class="actions card-actions">
         <form action="/authorize" method="POST">

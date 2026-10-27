@@ -15,6 +15,9 @@
             <li class="list-row items-start">
               <div class="min-w-0 space-y-1">
                 <p class="truncate text-sm font-medium">#(grant.serviceName)</p>
+                #if(grant.serviceDomain):
+                  <p class="truncate text-xs muted">#(grant.serviceDomain)</p>
+                #endif
                 #for(scope in grant.scopes):
                   <p class="text-sm muted">#(scope.description)</p>
                 #endfor
@@ -23,7 +26,8 @@
                 </p>
               </div>
               <form action="/access/#(grant.id)/revoke" method="POST"
-                    onsubmit="return confirm('Revoke access for #(grant.serviceName)?');">
+                    data-confirm-action="revoke:#(grant.id)" data-question="Revoke access for #(grant.serviceName)?">
+                <input type="hidden" name="confirmation">
                 <button type="submit" class="btn-danger">Revoke</button>
               </form>
             </li>
@@ -31,7 +35,40 @@
         </ul>
       #endif
 
-      <p class="text-xs muted">Each device you authorise is listed on its own. Revoking takes effect at once.</p>
+      <p class="text-xs muted">Each device you authorise is listed on its own. Revoking takes effect at once, after you confirm with your passkey.</p>
+      <p id="status" class="status empty:hidden"></p>
+
+      #if(count(appData) > 0):
+        <div>
+          <h2 class="text-sm font-medium">Data kept by apps</h2>
+          <ul class="list mt-2">
+            #for(app in appData):
+              <li class="list-row items-start">
+                <div class="min-w-0 space-y-1">
+                  <p class="truncate text-sm font-medium">#(app.name)</p>
+                  #if(app.domain):
+                    <p class="truncate text-xs muted">#(app.domain)</p>
+                  #endif
+                  <p class="text-xs muted">#(app.count) #if(app.count == 1):entry#else:entries#endif</p>
+                </div>
+                #if(app.hasAccess):
+                  <p class="text-xs muted">Revoke access to delete</p>
+                #else:
+                  <form action="/access/data/delete" method="POST"
+                        data-confirm-action="delete-data:#(app.namespace)" data-question="Delete everything #(app.name) kept here?">
+                    <input type="hidden" name="namespace" value="#(app.namespace)">
+                    <input type="hidden" name="confirmation">
+                    <button type="submit" class="btn-danger">Delete</button>
+                  </form>
+                #endif
+              </li>
+            #endfor
+          </ul>
+        </div>
+      #endif
     </div>
+    <script type="application/javascript" src="/scripts/base64.js"></script>
+    <script type="application/javascript" src="/scripts/passkey/shared.js"></script>
+    <script type="application/javascript" src="/scripts/access.js"></script>
   #endexport
 #endextend

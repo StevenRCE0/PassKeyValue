@@ -10,17 +10,17 @@ import WebAuthn
 
 @Suite("Third-party access", .serialized)
 struct ThirdPartyAccessTests {
-    static let service = "keeptalking-gateway"
+    static let service = "https://gateway.test/passkv/client.json"
     static let redirectURI = "ktpasskv://authorized"
     static let revocationURL = "https://gateway.test/v1/passkv/revocations"
-    static let services: [String: ThirdPartyService] = [
-        service: .init(
-            name: "KeepTalking Plan",
-            scopes: ["plan:link": "Link your subscription", "plan:access": "Use your plan on this device"],
-            redirectURIs: [redirectURI],
-            revocationURL: revocationURL),
-        "other": .init(name: "Other", scopes: ["profile:read": "Read your profile"], redirectURIs: ["other://cb"]),
-    ]
+
+    static func document(clientID: String = service, revocation: String? = revocationURL) throws -> String {
+        let client = ThirdPartyClient(
+            clientID: clientID, clientName: "KeepTalking Plan", redirectURIs: [redirectURI],
+            scopeDescriptions: ["plan:link": "Link your subscription", "plan:access": "Use your plan on this device"],
+            revocationNoticeURI: revocation)
+        return String(decoding: try JSONEncoder().encode(client), as: UTF8.self)
+    }
 
     final class Browser: @unchecked Sendable {
         var user: User?
@@ -31,14 +31,14 @@ struct ThirdPartyAccessTests {
     private func withAccess(_ body: (Application, Browser, Delivered) async throws -> Void) async throws {
         try await withApp(configure: configure) { app in
             let delivered = Delivered()
+            delivered.documents[Self.service] = try Self.document()
             app.clients.use { app in RecordingClient(eventLoop: app.eventLoopGroup.next(), delivered: delivered) }
             app.revocationRetries = [.milliseconds(10), .milliseconds(10)]
             let key = ES256PrivateKey()
             await app.jwt.keys.add(ecdsa: key, kid: ThirdPartyAccessController.kid)
             let routes = app.grouped("t")
-            try routes.register(
-                collection: ThirdPartyAccessController(publicKey: key.publicKey, services: Self.services))
-            try routes.register(collection: AuthorisationController(services: Self.services))
+            try routes.register(collection: ThirdPartyAccessController(publicKey: key.publicKey))
+            try routes.register(collection: AuthorisationController())
             let browser = Browser()
             browser.user = try await account("ada", passkey: browser.passkey, on: app.db)
             try await body(app, browser, delivered)
@@ -123,7 +123,7 @@ struct ThirdPartyAccessTests {
         }
         return try await send(
             app, .POST, "t/authorize", browser: browser,
-            form: AuthorisationDecision(ticket: ticket, approve: approve, credential: credential))
+            form: AuthorisationDecision(ticket: ticket, approve: approve, credential: credential, scopes: nil))
     }
 
     private func approve(
@@ -161,6 +161,14 @@ struct ThirdPartyAccessTests {
         return try await exchange(app, code: code, verifier: verifier, browser: browser).content.decode(TokenResponse.self)
     }
 
+    private func confirmation(
+        _ app: Application, _ browser: Browser, action: String, passkey: Passkey? = nil
+    ) async throws -> String {
+        struct Options: Decodable { let challenge: URLEncodedBase64 }
+        let options = try await send(app, .POST, "confirm", browser: browser, form: ConfirmationRequest(action: action))
+        return try (passkey ?? browser.passkey).assertion(over: try options.content.decode(Options.self).challenge)
+    }
+
     private func keys(_ app: Application, _ browser: Browser) async throws -> JWTKeyCollection {
         let jwks = try await send(app, .GET, "t/.well-known/jwks.json", browser: browser).content.decode(JWKS.self)
         return try await JWTKeyCollection().add(jwks: jwks)
@@ -177,6 +185,7 @@ struct ThirdPartyAccessTests {
         try await withAccess { app, browser, delivered in
             let (page, _) = try await consent(app, browser)
             #expect(page.contains("KeepTalking Plan"))
+            #expect(page.contains("gateway.test"))
             #expect(page.contains("Link your subscription"))
             #expect(page.contains("Allow with passkey"))
             #expect(browser.cookie == nil)
@@ -221,7 +230,9 @@ struct ThirdPartyAccessTests {
     func badTickets() async throws {
         try await withAccess { app, browser, delivered in
             let (_, ticket) = try await consent(app, browser)
-            let tampered = String(ticket.dropLast()) + (ticket.hasSuffix("A") ? "B" : "A")
+            var parts = ticket.split(separator: ".").map(String.init)
+            parts[2] = (parts[2].hasPrefix("A") ? "B" : "A") + parts[2].dropFirst()
+            let tampered = parts.joined(separator: ".")
             #expect(try await decide(app, browser, ticket: tampered, challengeFrom: ticket).status == .badRequest)
 
             let request = AuthorisationRequest(
@@ -229,12 +240,14 @@ struct ThirdPartyAccessTests {
                 state: "xyz", codeChallenge: PKCE().challenge, codeChallengeMethod: "S256")
             let expired = try await app.jwt.keys.sign(
                 AuthorisationTicket(
-                    request: request, scopes: ["plan:link"], passkeyChallenge: [1, 2, 3],
+                    request: request,
+                    client: try JSONDecoder().decode(ThirdPartyClient.self, from: Data(try Self.document().utf8)),
+                    scopes: ["plan:link"], allowlisted: false, native: false, passkeyChallenge: [1, 2, 3],
                     now: .now.addingTimeInterval(-AuthorisationTicket.lifetime - 1)),
                 kid: ThirdPartyAccessController.kid)
             let answer = try await send(
                 app, .POST, "t/authorize", browser: browser,
-                form: AuthorisationDecision(ticket: expired, approve: false, credential: nil))
+                form: AuthorisationDecision(ticket: expired, approve: false, credential: nil, scopes: nil))
             #expect(answer.status == .badRequest)
             #expect(try await AuthorisationCode.query(on: app.db).count() == 0)
         }
@@ -276,6 +289,27 @@ struct ThirdPartyAccessTests {
         }
     }
 
+    @Test("a service is only believed when its own document vouches for it")
+    func clientDocuments() async throws {
+        try await withAccess { app, browser, delivered in
+            let elsewhere = "https://elsewhere.test/client.json"
+            let farNotices = "https://gateway.test/notices.json"
+            let broken = "https://gateway.test/broken.json"
+            delivered.documents[elsewhere] = try Self.document()
+            delivered.documents[farNotices] = try Self.document(
+                clientID: farNotices, revocation: "https://elsewhere.test/revocations")
+            delivered.documents[broken] = "{"
+            let challenge = PKCE().challenge
+            for service in [
+                elsewhere, farNotices, broken, "https://gateway.test/missing.json",
+                "http://gateway.test/passkv/client.json", "keeptalking-gateway",
+            ] {
+                let answer = try await send(app, .GET, authorizePath(service: service, challenge: challenge), browser: browser)
+                #expect(answer.status == .badRequest, "\(service)")
+            }
+        }
+    }
+
     @Test("a code needs its own verifier, and is spent by the first try")
     func codeNeedsVerifier() async throws {
         try await withAccess { app, browser, delivered in
@@ -310,7 +344,11 @@ struct ThirdPartyAccessTests {
             #expect(listed.count == 2)
 
             let phoneGrant = try await keys(app, browser).verify(phone.accessToken, as: ThirdPartyAccessToken.self).grant
-            #expect(try await send(app, .DELETE, "t/api/access/grants/\(phoneGrant)", browser: browser).status == .noContent)
+            #expect(try await send(app, .DELETE, "t/api/access/grants/\(phoneGrant)", browser: browser).status == .forbidden)
+            let confirmed = Confirmation(confirmation: try await confirmation(app, browser, action: "revoke:\(phoneGrant)"))
+            #expect(
+                try await send(app, .DELETE, "t/api/access/grants/\(phoneGrant)", browser: browser, form: confirmed).status
+                    == .noContent)
             #expect(try await refresh(app, phone.refreshToken, browser: browser).status == .badRequest)
             #expect(try await refresh(app, mac.refreshToken, browser: browser).status == .ok)
 
@@ -358,6 +396,59 @@ struct ThirdPartyAccessTests {
         }
     }
 
+    @Test("revoking needs a fresh passkey answer from this account, for this grant")
+    func revokingNeedsPasskey() async throws {
+        try await withAccess { app, browser, delivered in
+            let tokens = try await linkDevice(app, browser)
+            let grant = try await keys(app, browser).verify(tokens.accessToken, as: ThirdPartyAccessToken.self).grant
+            let path = "t/api/access/grants/\(grant)"
+
+            let otherAction = Confirmation(confirmation: try await confirmation(app, browser, action: "revoke:\(UUID())"))
+            #expect(try await send(app, .DELETE, path, browser: browser, form: otherAction).status == .forbidden)
+
+            let bob = Passkey()
+            _ = try await account("bob", passkey: bob, on: app.db)
+            let someoneElse = Confirmation(
+                confirmation: try await confirmation(app, browser, action: "revoke:\(grant)", passkey: bob))
+            #expect(try await send(app, .DELETE, path, browser: browser, form: someoneElse).status == .forbidden)
+
+            let reused = try await confirmation(app, browser, action: "revoke:\(grant)")
+            #expect(try await send(app, .DELETE, path, browser: browser, form: Confirmation(confirmation: reused)).status == .noContent)
+            #expect(try await grants(app, browser).isEmpty)
+        }
+    }
+
+    @Test("adding a passkey to a signed-in account needs a fresh passkey answer")
+    func addingPasskeyNeedsPasskey() async throws {
+        try await withAccess { app, browser, delivered in
+            _ = try await approve(app, browser)
+            let begin = BeginPasskeyRequest(stage: .registration, isMerging: true, passkeyName: "Second")
+            #expect(try await send(app, .POST, "begin", browser: browser, form: begin).status == .forbidden)
+            let confirmed = BeginPasskeyRequest(
+                stage: .registration, isMerging: true, passkeyName: "Second",
+                confirmation: try await confirmation(app, browser, action: "add-passkey"))
+            #expect(try await send(app, .POST, "begin", browser: browser, form: confirmed).status == .ok)
+        }
+    }
+
+    @Test("a website session lasts twelve hours, in a strict same-site cookie")
+    func sessionLifetime() async throws {
+        try await withAccess { app, browser, delivered in
+            _ = try await approve(app, browser)
+            #expect(try await send(app, .GET, "t/access", browser: browser).status == .ok)
+            #expect(browser.cookie?.sameSite == .strict)
+            #expect(browser.cookie?.maxAge == Int(SessionLifetime.duration))
+
+            let records = try await SessionRecord.query(on: app.db).all()
+            #expect(records.contains { $0.data[PasskeySessionKey.signedInAt] != nil })
+            for record in records where record.data[PasskeySessionKey.signedInAt] != nil {
+                record.data[PasskeySessionKey.signedInAt] = String(Date.now.timeIntervalSince1970 - SessionLifetime.duration - 1)
+                try await record.save(on: app.db)
+            }
+            #expect(try await send(app, .GET, "t/access", browser: browser).status == .seeOther)
+        }
+    }
+
     @Test("the access page lists grants and revokes them")
     func accessPage() async throws {
         try await withAccess { app, browser, delivered in
@@ -366,7 +457,8 @@ struct ThirdPartyAccessTests {
             let page = try await send(app, .GET, "t/access", browser: browser)
             #expect(page.body.string.contains("KeepTalking Plan"))
             #expect(page.body.string.contains("Link your subscription"))
-            #expect(try await send(app, .POST, "t/access/\(grant)/revoke", browser: browser).status == .seeOther)
+            let confirmed = Confirmation(confirmation: try await confirmation(app, browser, action: "revoke:\(grant)"))
+            #expect(try await send(app, .POST, "t/access/\(grant)/revoke", browser: browser, form: confirmed).status == .seeOther)
             #expect(try await grants(app, browser).isEmpty)
         }
     }
@@ -398,11 +490,13 @@ struct Passkey {
     let key = P256.Signing.PrivateKey()
     let id = OpaqueToken.generate()
 
-    func register(for user: User, on db: any Database) async throws {
+    var cose: [UInt8] {
         let raw = [UInt8](key.publicKey.rawRepresentation)
-        let cose: [UInt8] =
-            [0xA5, 0x01, 0x02, 0x03, 0x26, 0x20, 0x01, 0x21, 0x58, 0x20] + raw.prefix(32) + [0x22, 0x58, 0x20]
+        return [0xA5, 0x01, 0x02, 0x03, 0x26, 0x20, 0x01, 0x21, 0x58, 0x20] + raw.prefix(32) + [0x22, 0x58, 0x20]
             + raw.suffix(32)
+    }
+
+    func register(for user: User, on db: any Database) async throws {
         try await WebAuthnCredential(
             id: URLEncodedBase64(id).urlDecoded.asString(), publicKey: cose.base64URLEncodedString().asString(),
             currentSignCount: 0, name: "Test", userID: user.requireID()
@@ -424,25 +518,59 @@ struct Passkey {
         ]
         return String(decoding: try JSONSerialization.data(withJSONObject: credential), as: UTF8.self)
     }
+
+    func registration(over challenge: URLEncodedBase64) throws -> [String: Any] {
+        func bytes(_ value: [UInt8]) -> [UInt8] {
+            value.count < 24 ? [0x40 + UInt8(value.count)] + value
+                : value.count < 256 ? [0x58, UInt8(value.count)] + value
+                : [0x59, UInt8(value.count >> 8), UInt8(value.count & 0xFF)] + value
+        }
+        func text(_ value: String) -> [UInt8] { [0x60 + UInt8(value.utf8.count)] + Array(value.utf8) }
+        let credentialID = URLEncodedBase64(id).decodedBytes ?? []
+        let authenticatorData: [UInt8] =
+            Array(SHA256.hash(data: Data("localhost".utf8))) + [0x45, 0, 0, 0, 0] + [UInt8](repeating: 0, count: 16)
+            + [UInt8(credentialID.count >> 8), UInt8(credentialID.count & 0xFF)] + credentialID + cose
+        let attestation: [UInt8] =
+            [0xA3] + text("fmt") + text("none") + text("attStmt") + [0xA0] + text("authData") + bytes(authenticatorData)
+        let clientData = Data(
+            #"{"type":"webauthn.create","challenge":"\#(challenge.asString())","origin":"http://localhost:8080"}"#.utf8)
+        return [
+            "id": id, "rawId": id, "type": "public-key",
+            "response": [
+                "attestationObject": attestation.base64URLEncodedString().asString(),
+                "clientDataJSON": clientData.base64URLEncodedString().asString(),
+            ],
+        ]
+    }
 }
 
 final class Delivered: Sendable {
     private struct State {
+        var documents: [String: String] = [:]
         var statuses: [HTTPStatus] = []
         var requests: [ClientRequest] = []
     }
 
     private let state = NIOLockedValueBox(State())
 
+    var documents: [String: String] {
+        get { state.withLockedValue(\.documents) }
+        set { state.withLockedValue { $0.documents = newValue } }
+    }
+
     var statuses: [HTTPStatus] {
         get { state.withLockedValue(\.statuses) }
         set { state.withLockedValue { $0.statuses = newValue } }
     }
 
-    func record(_ request: ClientRequest) -> HTTPStatus {
+    func respond(to request: ClientRequest) -> ClientResponse {
         state.withLockedValue { state in
+            if request.method == .GET {
+                guard let document = state.documents[request.url.string] else { return ClientResponse(status: .notFound) }
+                return ClientResponse(status: .ok, body: ByteBuffer(string: document))
+            }
             state.requests.append(request)
-            return state.statuses.isEmpty ? .noContent : state.statuses.removeFirst()
+            return ClientResponse(status: state.statuses.isEmpty ? .noContent : state.statuses.removeFirst())
         }
     }
 
@@ -465,6 +593,6 @@ struct RecordingClient: Client {
     }
 
     func send(_ request: ClientRequest) -> EventLoopFuture<ClientResponse> {
-        eventLoop.makeSucceededFuture(ClientResponse(status: delivered.record(request)))
+        eventLoop.makeSucceededFuture(delivered.respond(to: request))
     }
 }

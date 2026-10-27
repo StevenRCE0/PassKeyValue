@@ -162,6 +162,14 @@
     };
   };
 
+  ns.confirmWithPasskey = async function confirmWithPasskey(action) {
+    const options = await ns.callJSON("/confirm", "POST", { action });
+    const credential = await navigator.credentials.get({
+      publicKey: ns.decodeRequestOptions(options),
+    });
+    return JSON.stringify(ns.authenticationPayload(credential));
+  };
+
   ns.runPasskeyFlow = async function runPasskeyFlow(ctx, config) {
     const handlers = ns.getFlowHandlers();
     const handler = handlers[config.stage];

@@ -6,7 +6,7 @@ struct CreateUser: AsyncMigration {
             .id()
             .field("username", .string, .required)
             .field("created_at", .datetime, .required)
-            .field("storage", .custom(User.KVType()), .required)
+            .field("storage", .dictionary(of: .string), .required)
             .create()
     }
 

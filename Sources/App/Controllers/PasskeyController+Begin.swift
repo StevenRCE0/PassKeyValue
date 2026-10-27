@@ -14,6 +14,7 @@ extension PasskeyController {
         case .registration:
             let user: User
             if isMerging, let sessionUser = req.auth.get(User.self) {
+                try await req.confirmPasskey(for: "add-passkey", answer: beginRequest.confirmation)
                 user = sessionUser
             } else {
                 let username =

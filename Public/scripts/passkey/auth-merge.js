@@ -58,10 +58,13 @@
 
   async function runMerge(ctx, action, mergeMode, passkeyName) {
     if (action === ns.STAGE_REGISTRATION) {
+      ns.setStatus(ctx, "Confirm with a passkey you already have ...");
+      const confirmation = await ns.confirmWithPasskey("add-passkey");
       await ns.runPasskeyFlow(ctx, {
         stage: ns.STAGE_REGISTRATION,
         isMerging: true,
         passkeyName,
+        beginExtras: { confirmation },
         beginStatus: "Running /begin for session flow ...",
         credentialStatus: "Creating passkey B ...",
         continueStatus: "Running /continue for B registration ...",

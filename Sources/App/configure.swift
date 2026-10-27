@@ -17,7 +17,7 @@ public func configure(_ app: Application) async throws {
             .userAgent,
             .accessControlAllowOrigin, .accessControlAllowCredentials,
         ],
-        allowCredentials: true
+        allowCredentials: false
     )
     let cors = CORSMiddleware(configuration: corsConfiguration)
 
@@ -31,8 +31,10 @@ public func configure(_ app: Application) async throws {
     app.sessions.configuration.cookieFactory = { sessionID in
         .init(
             string: sessionID.string,
+            maxAge: Int(SessionLifetime.duration),
             isSecure: app.environment == .production,
-            isHTTPOnly: true
+            isHTTPOnly: true,
+            sameSite: .strict
         )
     }
 
@@ -52,6 +54,7 @@ public func configure(_ app: Application) async throws {
 
     app.sessions.use(.fluent)
     app.middleware.use(app.sessions.middleware)
+    app.middleware.use(SessionLifetime())
 
     app.migrations.add(JobMetadataMigrate())
     app.migrations.add(SessionRecord.migration)
@@ -60,6 +63,9 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateThirdPartyGrant())
     app.migrations.add(CreateAuthorisationCode())
     app.migrations.add(CreateRefreshToken())
+    app.migrations.add(AddThirdPartyClientDetails())
+    app.migrations.add(CreateKVRecord())
+    app.migrations.add(MoveUserStorageToKV())
 
     app.queues.use(.fluent())
     try app.queues.startInProcessJobs(on: .default)
@@ -85,12 +91,9 @@ public func configure(_ app: Application) async throws {
     if let signingKey {
         await app.jwt.keys.add(ecdsa: signingKey, kid: ThirdPartyAccessController.kid)
     }
-    let services = try Environment.get("THIRD_PARTY_SERVICES")
-        .flatMap { $0.isEmpty ? nil : $0 }
-        .map { try JSONDecoder().decode([String: ThirdPartyService].self, from: Data($0.utf8)) } ?? [:]
-    try app.register(collection: ThirdPartyAccessController(publicKey: signingKey?.publicKey, services: services))
+    try app.register(collection: ThirdPartyAccessController(publicKey: signingKey?.publicKey))
     if signingKey != nil {
-        try app.register(collection: AuthorisationController(services: services))
+        try app.register(collection: AuthorisationController())
     }
 
     try await app.autoMigrate()

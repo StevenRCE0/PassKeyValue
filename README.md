@@ -39,18 +39,67 @@ Environment variables:
 | `APN_PRIVATE_KEY_PEM` | none | Fallback inline PEM for the APNs auth key |
 | `APPLE_APP_IDENTIFIER` | `com.example.app` | Enables `/.well-known/apple-app-site-association` response |
 | `THIRD_PARTY_SIGNING_KEY` | none | PEM P-256 private key that signs third-party assertions; also publishes `/.well-known/jwks.json` |
-| `THIRD_PARTY_SERVICES` | `{}` | JSON map of the services users can authorise, each with its scopes, redirect URIs and optional revocation URL, e.g. `{"keeptalking-gateway":{"name":"KeepTalking Plan","scopes":{"plan:link":"Link your subscription to this account"},"redirectURIs":["ktpasskv://authorized"],"revocationURL":"https://gateway.example.com/v1/passkv/revocations"}}` |
+| `FIRST_PARTY_DOMAINS` | none | Comma-separated domains whose apps are this instance's own, e.g. `keeptalking.dev` (subdomains included) |
 
 ### Third-party access
 
-PassKeyValue is an OAuth 2.0 authorisation server for the configured
-services: the authorisation code flow with PKCE (`S256`), one grant per
-device.
+PassKeyValue is an OAuth 2.0 authorisation server for any service: the
+authorisation code flow with PKCE (`S256`), one grant per device. There is
+no list of services to configure. A service's `client_id` is the https URL
+of a JSON document it hosts:
+
+```json
+{
+  "client_id": "https://service.example/passkv/client.json",
+  "client_name": "Example",
+  "redirect_uris": ["example://authorized"],
+  "scope_descriptions": {"notes:read": "Read your notes"},
+  "revocation_notice_uri": "https://service.example/passkv/revocations"
+}
+```
+
+`client_id` must match the URL, the redirect URI must be listed, every
+requested scope must be described (PassKeyValue describes its own `kv`
+scopes), and the revocation URL must be on the same host. The consent page
+shows the service's name and domain; the grant keeps what the user approved.
+
+An instance belongs to whoever hosts it, and apps on `FIRST_PARTY_DOMAINS`
+are its own. Skipping consent depends on how the answer comes back, not only
+on the domain: an allowlisted app that answers the passkey challenge natively
+(the Authorization Challenge Endpoint, which needs the app in
+`webcredentials`) gets no consent page, because the OS hands the result straight back to it. On the web page
+an allowlisted app still asks ("Sign in to … on this computer?"), with every
+scope required, since any program on the computer could have started that
+request. Every other app gets the consent page, where shared data is
+optional. Either way, an app gets a scoped grant it can lose, never a
+session.
+
+First-party apps follow the Authorization Challenge Endpoint of
+[OAuth 2.0 for First-Party Applications](https://datatracker.ietf.org/doc/draft-ietf-oauth-first-party-apps/),
+a form `POST /oauth/authorize-challenge` made in steps:
+
+1. `client_id`, `scope`, `code_challenge`, `code_challenge_method=S256`:
+   answered with `insufficient_authorization`, an `auth_session` and a
+   `passkey` request.
+2. `auth_session` and `passkey` (the assertion as JSON): answered with
+   `authorization_code`, traded at `/oauth/token` without a `redirect_uri`.
+
+A new person sends `auth_session` and `name` instead, gets a
+`signup_session` and a `passkey_registration` request, and finishes with
+`auth_session`, `signup_session` and `passkey_registration` (the new
+credential). Other apps are told `redirect_to_web`. These answers set no
+session cookie.
+
+Loopback redirect URIs (`http://127.0.0.1/callback`, `http://[::1]/…`) match
+on any port, as RFC 8252 §7.3 asks.
 
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /authorize?response_type=code&client_id&redirect_uri&scope&state&code_challenge&code_challenge_method=S256` | Consent page |
 | `POST /authorize` | The page's answer: Allow with a passkey, or Don't Allow |
+| `POST /authorize/signup` `{"ticket","name"}` | The page starts a new account and passkey for this request |
+| `POST /authorize/signup/finish` `{"ticket","signup","credential","scopes"}` | Creates them and approves the request |
+| `POST /oauth/authorize-challenge` | A first-party app signs in without a browser (below) |
 | `POST /oauth/token` `grant_type=authorization_code` | Trades the code (60 seconds, single use) for tokens |
 | `POST /oauth/token` `grant_type=refresh_token` | A new access token and refresh token |
 | `POST /oauth/revoke` `token&client_id` | The device gives its grant back |
@@ -60,15 +109,38 @@ The consent page carries a signed, five-minute ticket holding the request
 and a fresh passkey challenge. Allowing means answering that challenge with
 a passkey, which also signs the browser in as that account.
 
-An access token is a five-minute ES256 JWT carrying `sub` (account ID),
-`aud` (the service), `scope`, `grant`, `iat`, `exp` and `jti`. A refresh
+An access token is a five-minute ES256 JWT carrying `iss` (the instance),
+`sub` (account ID), `aud` (the service), `scope`, `grant`, `iat`, `exp` and
+`jti`. A refresh
 token works once; presenting a spent one revokes the grant.
 
 Users see and revoke their grants at `/access`, or through
 `GET /api/access/grants` and `DELETE /api/access/grants/:id` with the session
 cookie. When a grant ends, PassKeyValue posts a signed `application/jwt`
 notice (`sub`, `aud`, `scope`, `grant`, `revoked_at`) to the service's
-`revocationURL`, retrying for a few minutes.
+`revocation_notice_uri`, retrying for a few minutes.
+
+### Data
+
+Each account's key-value data lives in namespaces: `shared`, and one per
+app (its `client_id`). `/api/kv` serves both kinds of caller:
+
+- the website's session reads and writes `shared`, and can reach any
+  namespace with `?namespace=`;
+- an app sends `Authorization: Bearer <access token>`. With `kv` it gets its
+  own namespace by default; `kv:shared:read` and `kv:shared:write` open
+  `?namespace=shared`. Other apps choose those two on the consent page and
+  can leave them out. A revoked grant's token stops working at once.
+
+`/access` lists the data each app keeps, and deletes it once the app has no
+access left.
+
+### Website sessions
+
+A sign-in lasts twelve hours, in an HTTP-only `SameSite=Strict` cookie.
+Revoking a grant, deleting an app's data and adding a passkey each need a
+fresh passkey answer: `POST /confirm` `{"action"}` returns a challenge, and
+the action's request carries the answer as `confirmation`.
 
 Generate a key with
 `openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt`.

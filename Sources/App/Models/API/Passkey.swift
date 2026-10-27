@@ -15,12 +15,22 @@ struct BeginPasskeyRequest: Content {
     let stage: PasskeyFlow
     let isMerging: Bool
     let passkeyName: String?
+    let confirmation: String?
 
-    init(stage: PasskeyFlow, isMerging: Bool = false, passkeyName: String? = nil) {
+    init(stage: PasskeyFlow, isMerging: Bool = false, passkeyName: String? = nil, confirmation: String? = nil) {
         self.stage = stage
         self.isMerging = isMerging
         self.passkeyName = passkeyName
+        self.confirmation = confirmation
     }
+}
+
+struct ConfirmationRequest: Content {
+    let action: String
+}
+
+struct Confirmation: Content {
+    let confirmation: String?
 }
 
 struct BeginPasskeyResponse: Encodable {
