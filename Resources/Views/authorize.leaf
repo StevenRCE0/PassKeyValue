@@ -60,6 +60,7 @@
     </div>
 
     <script type="application/javascript" src="/scripts/base64.js"></script>
+    <script type="application/javascript" src="/scripts/utils.js"></script>
     <script type="application/javascript" src="/scripts/passkey/shared.js"></script>
     <script type="application/javascript" src="/scripts/authorize.js"></script>
   #endexport
