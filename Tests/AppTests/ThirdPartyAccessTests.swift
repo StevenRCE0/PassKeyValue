@@ -76,7 +76,7 @@ struct ThirdPartyAccessTests {
 
     struct PKCE {
         let verifier = OpaqueToken.generate()
-        var challenge: String { Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString() }
+        var challenge: String { Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString().asString() }
     }
 
     private func authorizePath(

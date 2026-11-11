@@ -149,7 +149,7 @@ final class AuthorisationCode: Model, @unchecked Sendable {
     }
 
     func isAnswered(by verifier: String) -> Bool {
-        Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString() == codeChallenge
+        Data(SHA256.hash(data: Data(verifier.utf8))).base64URLEncodedString().asString() == codeChallenge
     }
 }
 
@@ -228,10 +228,10 @@ struct CreateRefreshToken: AsyncMigration {
 
 enum OpaqueToken {
     static func generate() -> String {
-        Data([UInt8].random(count: 32)).base64URLEncodedString()
+        Data([UInt8].random(count: 32)).base64URLEncodedString().asString()
     }
 
     static func hash(_ value: String) -> String {
-        Data(SHA256.hash(data: Data(value.utf8))).base64URLEncodedString()
+        Data(SHA256.hash(data: Data(value.utf8))).base64URLEncodedString().asString()
     }
 }
