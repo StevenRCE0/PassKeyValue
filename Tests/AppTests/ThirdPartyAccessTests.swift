@@ -321,17 +321,18 @@ struct ThirdPartyAccessTests {
 
     // MARK: - Refresh and revocation
 
-    @Test("refresh tokens rotate, and a spent one coming back revokes the grant")
-    func refreshRotation() async throws {
+    @Test("a refresh token keeps working, so a lost reply never ends the grant")
+    func refreshTokenIsReusable() async throws {
         try await withAccess { app, browser, delivered in
             let first = try await linkDevice(app, browser)
             let second = try await refresh(app, first.refreshToken, browser: browser).content.decode(TokenResponse.self)
-            #expect(second.refreshToken != first.refreshToken)
+            #expect(second.refreshToken == first.refreshToken)
+            #expect(second.accessToken != first.accessToken)
 
-            #expect(try await refresh(app, first.refreshToken, browser: browser).status == .badRequest)
-            #expect(try await refresh(app, second.refreshToken, browser: browser).status == .badRequest)
-            #expect(try await grants(app, browser).isEmpty)
-            #expect(try await delivered.requests(1).map(\.url.string) == [Self.revocationURL])
+            #expect(try await refresh(app, first.refreshToken, browser: browser).status == .ok)
+            #expect(try await refresh(app, first.refreshToken, browser: browser).status == .ok)
+            #expect(try await grants(app, browser).count == 1)
+            #expect(try await delivered.requests(0).isEmpty)
         }
     }
 

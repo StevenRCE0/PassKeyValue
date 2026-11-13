@@ -193,8 +193,6 @@ final class RefreshToken: Model, @unchecked Sendable {
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 
-    @OptionalField(key: "spent_at")
-    var spentAt: Date?
 
     init() {}
 

@@ -303,21 +303,24 @@ struct AuthorisationController: RouteCollection {
                 .first(),
             token.grant.service == request.clientID, token.grant.revokedAt == nil
         else { throw OAuthError.invalidGrant }
-        guard token.spentAt == nil else {
-            // A spent token came back, so someone else holds a copy.
-            try await token.grant.revoke(on: req.db, app: req.application)
-            throw OAuthError.invalidGrant
-        }
-        token.spentAt = .now
-        try await token.save(on: req.db)
-        return try await issueTokens(for: token.grant, on: req)
+        return try await issueTokens(for: token.grant, keeping: value, on: req)
     }
 
-    private func issueTokens(for grant: ThirdPartyGrant, on req: Request) async throws -> TokenResponse {
+    /// A refresh token lives until its grant is revoked, so a reply lost on
+    /// the way back costs the device nothing.
+    private func issueTokens(
+        for grant: ThirdPartyGrant, keeping existing: String? = nil, on req: Request
+    ) async throws -> TokenResponse {
         let access = try ThirdPartyAccessToken(grant: grant, issuer: req.application.thirdParty.issuer)
         let signed = try await req.jwt.sign(access, kid: ThirdPartyAccessController.kid)
-        let (refresh, value) = try RefreshToken.issue(for: grant)
-        try await refresh.save(on: req.db)
+        let value: String
+        if let existing {
+            value = existing
+        } else {
+            let (refresh, issued) = try RefreshToken.issue(for: grant)
+            try await refresh.save(on: req.db)
+            value = issued
+        }
         grant.lastUsedAt = .now
         try await grant.save(on: req.db)
         return TokenResponse(
