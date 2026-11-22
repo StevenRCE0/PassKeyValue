@@ -52,7 +52,7 @@ extension PasskeyController {
             )
             .save(on: req.db)
             req.session.data[PasskeySessionKey.activeCredentialID] = verifiedCredential.id
-            req.startSession(for: user)
+            req.auth.login(user)
 
             let passkeys = try await passkeySummaries(for: userID, on: req.db)
             return ContinuePasskeyResponse(status: "registered", userID: userID, passkeys: passkeys)
@@ -121,7 +121,7 @@ extension PasskeyController {
                         try providedCredential.requireID()
                 }
 
-                req.startSession(for: mergedUser)
+                req.auth.login(mergedUser)
                 let passkeys = try await passkeySummaries(for: mergedUserID, on: req.db)
                 return ContinuePasskeyResponse(
                     status: "merged", userID: mergedUserID, passkeys: passkeys)

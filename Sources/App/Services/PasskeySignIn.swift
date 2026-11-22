@@ -33,7 +33,7 @@ extension Request {
 
     func signIn(with credential: WebAuthnCredential) throws {
         session.data[PasskeySessionKey.activeCredentialID] = try credential.requireID()
-        startSession(for: credential.user)
+        auth.login(credential.user)
     }
 
     func confirmationChallenge(for action: String) -> PublicKeyCredentialRequestOptions {
@@ -58,25 +58,5 @@ extension Request {
         guard credential.$user.id == userID else {
             throw Abort(.forbidden, reason: "Confirm with one of this account’s passkeys.")
         }
-    }
-
-    func startSession(for user: User) {
-        session.data[PasskeySessionKey.signedInAt] = String(Date.now.timeIntervalSince1970)
-        auth.login(user)
-    }
-}
-
-struct SessionLifetime: AsyncMiddleware {
-    static let duration: TimeInterval = 12 * 60 * 60
-
-    func respond(to req: Request, chainingTo next: any AsyncResponder) async throws -> Response {
-        if req.hasSession, req.session.authenticated(User.self) != nil {
-            let signedInAt = req.session.data[PasskeySessionKey.signedInAt].flatMap(TimeInterval.init)
-            if signedInAt.map({ Date.now.timeIntervalSince1970 - $0 > Self.duration }) ?? true {
-                req.session.unauthenticate(User.self)
-                req.session.destroy()
-            }
-        }
-        return try await next.respond(to: req)
     }
 }

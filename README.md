@@ -131,7 +131,9 @@ access left.
 
 ### Website sessions
 
-A sign-in lasts twelve hours, in an HTTP-only `SameSite=Strict` cookie.
+A passkey sign-in, on the website or natively in an app, doesn't expire. It
+lives in an HTTP-only `SameSite=Strict` cookie that browsers keep for 400
+days from the last visit.
 Revoking a grant, deleting an app's data and adding a passkey each need a
 fresh passkey answer: `POST /confirm` `{"action"}` returns a challenge, and
 the action's request carries the answer as `confirmation`.

@@ -432,21 +432,13 @@ struct ThirdPartyAccessTests {
         }
     }
 
-    @Test("a website session lasts twelve hours, in a strict same-site cookie")
+    @Test("a passkey sign-in doesn't expire, in a strict same-site cookie")
     func sessionLifetime() async throws {
         try await withAccess { app, browser, delivered in
             _ = try await approve(app, browser)
             #expect(try await send(app, .GET, "t/access", browser: browser).status == .ok)
             #expect(browser.cookie?.sameSite == .strict)
-            #expect(browser.cookie?.maxAge == Int(SessionLifetime.duration))
-
-            let records = try await SessionRecord.query(on: app.db).all()
-            #expect(records.contains { $0.data[PasskeySessionKey.signedInAt] != nil })
-            for record in records where record.data[PasskeySessionKey.signedInAt] != nil {
-                record.data[PasskeySessionKey.signedInAt] = String(Date.now.timeIntervalSince1970 - SessionLifetime.duration - 1)
-                try await record.save(on: app.db)
-            }
-            #expect(try await send(app, .GET, "t/access", browser: browser).status == .seeOther)
+            #expect(browser.cookie?.maxAge == 400 * 24 * 60 * 60)
         }
     }
 

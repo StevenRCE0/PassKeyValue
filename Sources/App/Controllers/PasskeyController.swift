@@ -7,7 +7,6 @@ enum PasskeySessionKey {
     static let userID = "passkeyUserID"
     static let activeCredentialID = "activeCredentialID"
     static let isMerging = "passkeyIsMerging"
-    static let signedInAt = "signedInAt"
     static let confirmChallenge = "confirmChallenge"
     static let confirmAction = "confirmAction"
 }

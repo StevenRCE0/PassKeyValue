@@ -31,7 +31,7 @@ public func configure(_ app: Application) async throws {
     app.sessions.configuration.cookieFactory = { sessionID in
         .init(
             string: sessionID.string,
-            maxAge: Int(SessionLifetime.duration),
+            maxAge: 400 * 24 * 60 * 60,
             isSecure: app.environment == .production,
             isHTTPOnly: true,
             sameSite: .strict
@@ -54,7 +54,6 @@ public func configure(_ app: Application) async throws {
 
     app.sessions.use(.fluent)
     app.middleware.use(app.sessions.middleware)
-    app.middleware.use(SessionLifetime())
 
     app.migrations.add(JobMetadataMigrate())
     app.migrations.add(SessionRecord.migration)
