@@ -443,4 +443,31 @@ struct FirstPartyKVTests {
             #expect(records.first?.$user.id == user.id)
         }
     }
+
+    @Test("deleting the account takes its passkeys, data and every service's access with it")
+    func accountDeletion() async throws {
+        try await withInstance { instance in
+            try await signInOnTheWeb(instance)
+            let tokens = try await nativeSignIn(instance, scope: "kv")
+            try await send(instance, .POST, "api/kv/nodes", json: ["value": "[]"], bearer: tokens.accessToken)
+
+            #expect(try await send(instance, .DELETE, "account", json: [:]).status == .forbidden)
+            #expect(try await User.query(on: instance.app.db).count() == 1)
+
+            struct Options: Decodable { let challenge: URLEncodedBase64 }
+            let options = try await send(instance, .POST, "confirm", json: ["action": "delete-account"])
+                .content.decode(Options.self)
+            let confirmation = try instance.passkey.assertion(over: options.challenge)
+            #expect(
+                try await send(instance, .DELETE, "account", json: ["confirmation": confirmation]).status == .noContent)
+
+            #expect(try await User.query(on: instance.app.db).count() == 0)
+            #expect(try await WebAuthnCredential.query(on: instance.app.db).count() == 0)
+            #expect(try await ThirdPartyGrant.query(on: instance.app.db).count() == 0)
+            #expect(try await RefreshToken.query(on: instance.app.db).count() == 0)
+            #expect(try await KVRecord.query(on: instance.app.db).count() == 0)
+            #expect(try await send(instance, .GET, "api/kv/nodes", bearer: tokens.accessToken).status == .unauthorized)
+            #expect(try await send(instance, .POST, "confirm", json: ["action": "delete-account"]).status == .unauthorized)
+        }
+    }
 }

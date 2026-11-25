@@ -44,4 +44,19 @@ extension PasskeyController {
         let passkeys = try await passkeySummaries(for: userID, on: req.db)
         return DeletePasskeyResponse(status: "deleted", userID: userID, passkeys: passkeys)
     }
+
+    func deleteAccountHandler(req: Request) async throws -> HTTPStatus {
+        let user = try req.auth.require(User.self)
+        try await req.confirmPasskey(
+            for: "delete-account", answer: (try? req.content.decode(Confirmation.self))?.confirmation)
+        try await user.erase(on: req.db, app: req.application)
+        req.auth.logout(User.self)
+        req.session.destroy()
+        return .noContent
+    }
+
+    func deleteAccountFromPage(req: Request) async throws -> Response {
+        _ = try await deleteAccountHandler(req: req)
+        return req.redirect(to: "/")
+    }
 }

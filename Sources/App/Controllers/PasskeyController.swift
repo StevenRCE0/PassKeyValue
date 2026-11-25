@@ -19,7 +19,10 @@ struct PasskeyController: RouteCollection {
         authSessionRoutes.get("verify", use: verifyHandler)
         authSessionRoutes.get("passkeys", use: listPasskeysHandler)
         authSessionRoutes.delete("passkeys", ":credentialID", use: deletePasskeyHandler)
-        authSessionRoutes.grouped(User.guardMiddleware()).post("confirm", use: confirmHandler)
+        let account = authSessionRoutes.grouped(User.guardMiddleware())
+        account.post("confirm", use: confirmHandler)
+        account.delete("account", use: deleteAccountHandler)
+        account.post("account", "delete", use: deleteAccountFromPage)
     }
 
     func confirmHandler(req: Request) async throws -> Response {

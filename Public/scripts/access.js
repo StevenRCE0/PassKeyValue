@@ -1,6 +1,8 @@
 (function () {
   const ns = window.PasskeyTest;
-  const ctx = { statusEl: document.getElementById("status") };
+  const ctx = {
+    statusEl: document.querySelector("[data-confirm-status]") || document.getElementById("status"),
+  };
 
   document.querySelectorAll("form[data-confirm-action]").forEach((form) => {
     form.addEventListener("submit", (event) => {

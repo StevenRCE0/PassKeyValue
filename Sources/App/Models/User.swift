@@ -33,3 +33,16 @@ extension User {
 }
 
 extension User: ModelSessionAuthenticatable {}
+
+extension User {
+    func erase(on db: any Database, app: Application) async throws {
+        let grants = try await ThirdPartyGrant.query(on: db)
+            .filter(\.$user.$id == requireID())
+            .filter(\.$revokedAt == nil)
+            .all()
+        for grant in grants {
+            try await grant.revoke(on: db, app: app)
+        }
+        try await delete(on: db)
+    }
+}
