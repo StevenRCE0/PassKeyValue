@@ -11,8 +11,8 @@ extension Application {
         set { storage[RevocationRetries.self] = newValue }
     }
 
-    func announceRevocation(of grant: ThirdPartyGrant, to url: String) async throws {
-        let notice = try ThirdPartyRevocation(grant: grant, issuer: thirdParty.issuer)
+    func announceRevocation(of grant: ThirdPartyGrant, erasing: Bool, to url: String) async throws {
+        let notice = try ThirdPartyRevocation(grant: grant, erasing: erasing, issuer: thirdParty.issuer)
         let token = try await jwt.keys.sign(notice, kid: ThirdPartyAccessController.kid)
         Task { [self] in
             for delay in [Duration.zero] + revocationRetries {

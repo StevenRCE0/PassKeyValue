@@ -25,6 +25,9 @@ final class ThirdPartyGrant: Model, @unchecked Sendable {
     @OptionalField(key: "revocation_url")
     var revocationURL: String?
 
+    @OptionalField(key: "erased_on_revocation")
+    var erasedOnRevocation: String?
+
     @Timestamp(key: "created_at", on: .create)
     var createdAt: Date?
 
@@ -46,15 +49,25 @@ final class ThirdPartyGrant: Model, @unchecked Sendable {
         serviceName = code.serviceName
         scopeDescriptions = code.scopeDescriptions
         revocationURL = code.revocationURL
+        erasedOnRevocation = code.erasedOnRevocation
     }
 
-    func revoke(on db: any Database, app: Application) async throws {
+    func isLast(on db: any Database) async throws -> Bool {
+        try await ThirdPartyGrant.query(on: db)
+            .filter(\.$user.$id == $user.id)
+            .filter(\.$service == service)
+            .filter(\.$revokedAt == nil)
+            .filter(\.$id != requireID())
+            .count() == 0
+    }
+
+    func revoke(on db: any Database, app: Application, erasing: Bool) async throws {
         guard revokedAt == nil else { return }
         revokedAt = .now
         try await save(on: db)
         try await RefreshToken.query(on: db).filter(\.$grant.$id == requireID()).delete()
         if let revocationURL {
-            try await app.announceRevocation(of: self, to: revocationURL)
+            try await app.announceRevocation(of: self, erasing: erasing, to: revocationURL)
         }
     }
 }
@@ -91,6 +104,18 @@ struct AddThirdPartyClientDetails: AsyncMigration {
     }
 }
 
+struct AddErasedOnRevocation: AsyncMigration {
+    func prepare(on database: any Database) async throws {
+        try await database.schema(ThirdPartyGrant.schema).field("erased_on_revocation", .string).update()
+        try await database.schema(AuthorisationCode.schema).field("erased_on_revocation", .string).update()
+    }
+
+    func revert(on database: any Database) async throws {
+        try await database.schema(ThirdPartyGrant.schema).deleteField("erased_on_revocation").update()
+        try await database.schema(AuthorisationCode.schema).deleteField("erased_on_revocation").update()
+    }
+}
+
 // MARK: - Authorisation codes
 
 final class AuthorisationCode: Model, @unchecked Sendable {
@@ -121,6 +146,9 @@ final class AuthorisationCode: Model, @unchecked Sendable {
     @OptionalField(key: "revocation_url")
     var revocationURL: String?
 
+    @OptionalField(key: "erased_on_revocation")
+    var erasedOnRevocation: String?
+
     @Field(key: "redirect_uri")
     var redirectURI: String
 
@@ -142,6 +170,7 @@ final class AuthorisationCode: Model, @unchecked Sendable {
         code.serviceName = ticket.serviceName
         code.scopeDescriptions = ticket.scopeDescriptions.filter { scopes.contains($0.key) }
         code.revocationURL = ticket.revocationURL
+        code.erasedOnRevocation = ticket.erasedOnRevocation
         code.redirectURI = ticket.redirectURI
         code.codeChallenge = ticket.codeChallenge
         code.expiresAt = .now.addingTimeInterval(lifetime)

@@ -18,7 +18,7 @@ struct ThirdPartyAccessTests {
         let client = ThirdPartyClient(
             clientID: clientID, clientName: "KeepTalking Plan", redirectURIs: [redirectURI],
             scopeDescriptions: ["plan:link": "Link your subscription", "plan:access": "Use your plan on this device"],
-            revocationNoticeURI: revocation)
+            revocationNoticeURI: revocation, erasedOnRevocation: "Your plan's usage history.")
         return String(decoding: try JSONEncoder().encode(client), as: UTF8.self)
     }
 
@@ -343,6 +343,7 @@ struct ThirdPartyAccessTests {
             let mac = try await linkDevice(app, browser, scope: "plan:access")
             let listed = try await grants(app, browser)
             #expect(listed.count == 2)
+            #expect(listed.allSatisfy { $0.erasedOnRevocation == nil })
 
             let phoneGrant = try await keys(app, browser).verify(phone.accessToken, as: ThirdPartyAccessToken.self).grant
             #expect(try await send(app, .DELETE, "t/api/access/grants/\(phoneGrant)", browser: browser).status == .forbidden)
@@ -359,6 +360,17 @@ struct ThirdPartyAccessTests {
                 try #require(requests.first?.body.map { String(buffer: $0) }), as: ThirdPartyRevocation.self)
             #expect(notice.grant == phoneGrant)
             #expect(notice.scope == "plan:link")
+            #expect(!notice.erase)
+
+            let last = try #require(try await grants(app, browser).first)
+            #expect(last.erasedOnRevocation == "Your plan's usage history.")
+            let ending = Confirmation(confirmation: try await confirmation(app, browser, action: "revoke:\(last.id)"))
+            _ = try await send(app, .DELETE, "t/api/access/grants/\(last.id)", browser: browser, form: ending)
+            let final = try await keys(app, browser).verify(
+                try #require(try await delivered.requests(2).last?.body.map { String(buffer: $0) }),
+                as: ThirdPartyRevocation.self)
+            #expect(final.grant == last.id)
+            #expect(final.erase)
         }
     }
 
@@ -392,6 +404,7 @@ struct ThirdPartyAccessTests {
             let notice = try await keys(app, browser).verify(
                 try #require(request.body.map { String(buffer: $0) }), as: ThirdPartyRevocation.self)
             #expect(notice.grant == grant)
+            #expect(!notice.erase)
             #expect(notice.subject.value == browser.user?.id?.uuidString)
             try notice.audience.verifyIntendedAudience(includes: Self.service)
         }
@@ -450,6 +463,7 @@ struct ThirdPartyAccessTests {
             let page = try await send(app, .GET, "t/access", browser: browser)
             #expect(page.body.string.contains("KeepTalking Plan"))
             #expect(page.body.string.contains("Link your subscription"))
+            #expect(page.body.string.contains("Revoking erases:"))
             let confirmed = Confirmation(confirmation: try await confirmation(app, browser, action: "revoke:\(grant)"))
             #expect(try await send(app, .POST, "t/access/\(grant)/revoke", browser: browser, form: confirmed).status == .seeOther)
             #expect(try await grants(app, browser).isEmpty)

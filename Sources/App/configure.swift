@@ -63,6 +63,7 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateAuthorisationCode())
     app.migrations.add(CreateRefreshToken())
     app.migrations.add(AddThirdPartyClientDetails())
+    app.migrations.add(AddErasedOnRevocation())
     app.migrations.add(CreateKVRecord())
     app.migrations.add(MoveUserStorageToKV())
 

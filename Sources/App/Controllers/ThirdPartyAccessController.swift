@@ -106,12 +106,13 @@ struct ThirdPartyAccessController: RouteCollection {
 
     func listGrants(req: Request) async throws -> [ThirdPartyGrantSummary] {
         let userID = try req.auth.require(User.self).requireID()
-        return try await ThirdPartyGrant.query(on: req.db)
+        let grants = try await ThirdPartyGrant.query(on: req.db)
             .filter(\.$user.$id == userID)
             .filter(\.$revokedAt == nil)
             .sort(\.$createdAt)
             .all()
-            .map(summary(of:))
+        let devices = Dictionary(grouping: grants, by: \.service).mapValues(\.count)
+        return try grants.map { try summary(of: $0, isLast: devices[$0.service] == 1) }
     }
 
     func revoke(req: Request) async throws -> HTTPStatus {
@@ -121,11 +122,11 @@ struct ThirdPartyAccessController: RouteCollection {
         else { throw Abort(.notFound, reason: "No such grant.") }
         try await req.confirmPasskey(
             for: "revoke:\(try grant.requireID())", answer: (try? req.content.decode(Confirmation.self))?.confirmation)
-        try await grant.revoke(on: req.db, app: req.application)
+        try await grant.revoke(on: req.db, app: req.application, erasing: try await grant.isLast(on: req.db))
         return .noContent
     }
 
-    private func summary(of grant: ThirdPartyGrant) throws -> ThirdPartyGrantSummary {
+    private func summary(of grant: ThirdPartyGrant, isLast: Bool) throws -> ThirdPartyGrantSummary {
         ThirdPartyGrantSummary(
             id: try grant.requireID(),
             service: grant.service,
@@ -133,7 +134,8 @@ struct ThirdPartyAccessController: RouteCollection {
             serviceDomain: URL(string: grant.service)?.host,
             scopes: grant.scopes.map { ThirdPartyScope(id: $0, description: grant.scopeDescriptions?[$0] ?? $0) },
             createdAt: grant.createdAt,
-            lastUsedAt: grant.lastUsedAt
+            lastUsedAt: grant.lastUsedAt,
+            erasedOnRevocation: isLast ? grant.erasedOnRevocation : nil
         )
     }
 }

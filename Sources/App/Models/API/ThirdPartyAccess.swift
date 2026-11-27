@@ -10,6 +10,7 @@ struct ThirdPartyClient: Content {
     let redirectURIs: [String]
     let scopeDescriptions: [String: String]
     let revocationNoticeURI: String?
+    var erasedOnRevocation: String?
 
     enum CodingKeys: String, CodingKey {
         case clientID = "client_id"
@@ -17,6 +18,7 @@ struct ThirdPartyClient: Content {
         case redirectURIs = "redirect_uris"
         case scopeDescriptions = "scope_descriptions"
         case revocationNoticeURI = "revocation_notice_uri"
+        case erasedOnRevocation = "erased_on_revocation"
     }
 
     func allows(redirectURI: String) -> Bool {
@@ -65,6 +67,7 @@ struct ThirdPartyGrantSummary: Content {
     let scopes: [ThirdPartyScope]
     let createdAt: Date?
     let lastUsedAt: Date?
+    var erasedOnRevocation: String?
 }
 
 // MARK: - Authorisation code flow
@@ -99,6 +102,7 @@ struct AuthorisationTicket: JWTPayload {
         case serviceName = "service_name"
         case scopeDescriptions = "scope_descriptions"
         case revocationURL = "revocation_url"
+        case erasedOnRevocation = "erased_on_revocation"
         case redirectURI = "redirect_uri"
         case codeChallenge = "code_challenge"
         case passkeyChallenge = "passkey_challenge"
@@ -113,6 +117,7 @@ struct AuthorisationTicket: JWTPayload {
     var serviceName: String
     var scopeDescriptions: [String: String]
     var revocationURL: String?
+    var erasedOnRevocation: String?
     var redirectURI: String
     var state: String
     var codeChallenge: String
@@ -132,6 +137,7 @@ struct AuthorisationTicket: JWTPayload {
         scopeDescriptions = client.scopeDescriptions.merging(KVScope.descriptions) { _, ours in ours }
             .filter { scopes.contains($0.key) }
         revocationURL = client.revocationNoticeURI
+        erasedOnRevocation = client.erasedOnRevocation
         redirectURI = request.redirectURI
         state = request.state
         codeChallenge = request.codeChallenge
@@ -373,7 +379,7 @@ struct ThirdPartyRevocation: JWTPayload {
         case subject = "sub"
         case audience = "aud"
         case scope
-        case grant
+        case grant, erase
         case revokedAt = "revoked_at"
         case issuedAt = "iat"
         case expiration = "exp"
@@ -385,17 +391,19 @@ struct ThirdPartyRevocation: JWTPayload {
     var audience: AudienceClaim
     var scope: String
     var grant: UUID
+    var erase: Bool
     var revokedAt: Date
     var issuedAt: IssuedAtClaim
     var expiration: ExpirationClaim
     var id: IDClaim
 
-    init(grant: ThirdPartyGrant, issuer: String, now: Date = .now) throws {
+    init(grant: ThirdPartyGrant, erasing: Bool, issuer: String, now: Date = .now) throws {
         self.issuer = .init(value: issuer)
         subject = .init(value: grant.$user.id.uuidString)
         audience = .init(value: grant.service)
         scope = grant.scopes.joined(separator: " ")
         self.grant = try grant.requireID()
+        erase = erasing
         revokedAt = grant.revokedAt ?? now
         issuedAt = .init(value: now)
         expiration = .init(value: now.addingTimeInterval(Self.lifetime))

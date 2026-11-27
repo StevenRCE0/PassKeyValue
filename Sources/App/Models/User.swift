@@ -41,7 +41,7 @@ extension User {
             .filter(\.$revokedAt == nil)
             .all()
         for grant in grants {
-            try await grant.revoke(on: db, app: app)
+            try await grant.revoke(on: db, app: app, erasing: true)
         }
         try await delete(on: db)
     }

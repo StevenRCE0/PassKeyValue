@@ -21,12 +21,15 @@
                 #for(scope in grant.scopes):
                   <p class="text-sm muted">#(scope.description)</p>
                 #endfor
+                #if(grant.erasedOnRevocation):
+                  <p class="text-xs muted">Revoking erases: #(grant.erasedOnRevocation)</p>
+                #endif
                 <p class="text-xs muted">
                   Authorised #date(grant.createdAt, "d MMM yyyy")#if(grant.lastUsedAt): · last used #date(grant.lastUsedAt, "d MMM yyyy, HH:mm")#endif
                 </p>
               </div>
               <form action="/access/#(grant.id)/revoke" method="POST"
-                    data-confirm-action="revoke:#(grant.id)" data-question="Revoke access for #(grant.serviceName)?">
+                    data-confirm-action="revoke:#(grant.id)" data-question="Revoke access for #(grant.serviceName)?#if(grant.erasedOnRevocation): This also erases: #(grant.erasedOnRevocation)#endif">
                 <input type="hidden" name="confirmation">
                 <button type="submit" class="btn-danger">Revoke</button>
               </form>

@@ -56,8 +56,11 @@
       <section class="flex flex-col gap-3">
         <h2 class="section-title">Delete account</h2>
         <p class="text-xs muted">This removes your passkeys, everything stored on this account and every service’s access to it. It can’t be undone.</p>
+        #for(erasure in erasures):
+          <p class="text-xs muted">#(erasure.serviceName) also erases: #(erasure.erased)</p>
+        #endfor
         <form action="/account/delete" method="POST"
-              data-confirm-action="delete-account" data-question="Delete this account and everything stored on it?">
+              data-confirm-action="delete-account" data-question="Delete this account and everything stored on it?#for(erasure in erasures): #(erasure.serviceName) also erases: #(erasure.erased)#endfor">
           <input type="hidden" name="confirmation">
           <button type="submit" class="btn-danger">Delete account</button>
         </form>

@@ -341,7 +341,7 @@ struct AuthorisationController: RouteCollection {
             .first(),
             token.grant.service == request.clientID
         {
-            try await token.grant.revoke(on: req.db, app: req.application)
+            try await token.grant.revoke(on: req.db, app: req.application, erasing: false)
         }
         return .ok
     }
